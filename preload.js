@@ -32,5 +32,9 @@ contextBridge.exposeInMainWorld('notscape', {
   // RSS start page
   getFeeds: () => ipcRenderer.invoke('feeds:get'),
   setFeeds: (data) => ipcRenderer.invoke('feeds:set', data),
-  fetchFeed: (url) => ipcRenderer.invoke('rss:fetch', url)
+  fetchFeed: (url) => ipcRenderer.invoke('rss:fetch', url),
+
+  // per-site flourishes
+  getSiteFlourishes: () => ipcRenderer.invoke('flourishes:get'),
+  setSiteFlourishes: (data) => ipcRenderer.invoke('flourishes:set', data)
 });

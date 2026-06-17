@@ -104,7 +104,6 @@ function startDialing() {
     'Initializing modem...',
     'Verifying screen name "' + name + '"...',
     'Negotiating carrier (56,600 bps)...',
-    'Checking ' + name + "'s mailbox...",
     'Loading the World Wide Web...'
   ];
 

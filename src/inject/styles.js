@@ -83,6 +83,12 @@
         css.push(`img{filter:contrast(${ct}) saturate(0.85)!important}`);
       }
     }
+    if (c.retroMedia) {
+      // RealPlayer / old-QuickTime style frame + gray control panel
+      css.push('video,audio{border:3px outset #c0c0c0!important;background:#000!important;border-radius:0!important;box-shadow:none!important;padding:3px!important;box-sizing:border-box!important}');
+      css.push('video::-webkit-media-controls-panel,audio::-webkit-media-controls-panel{background:linear-gradient(#d4d0c8,#9a9a9a)!important}');
+      css.push('video::-webkit-media-controls-enclosure,audio::-webkit-media-controls-enclosure{border-radius:0!important;background:#c0c0c0!important}');
+    }
 
     return css.join('\n');
   }
@@ -91,6 +97,29 @@
   // PER-SITE SKINS — applied after the global pass so they win on conflicts.
   // Each skin: { name, test(host), css() }
   // -------------------------------------------------------------------------
+  // Winamp / MusicMatch Jukebox look for streaming music apps (best-effort recolor)
+  function winampCSS(label) {
+    return `
+      html,body{background:#0a0a0a!important;color:#00ff66!important;background-image:none!important}
+      html body,html body *{font-family:'Lucida Console','Courier New',monospace!important}
+      *{color:#00ff66!important;background-color:transparent!important;border-radius:0!important;
+        box-shadow:none!important;text-shadow:none!important}
+      [data-ns-unstick]{position:revert!important;top:revert!important;bottom:revert!important}
+      a,a:link{color:#66ffcc!important;text-decoration:none!important}
+      img{border:1px solid #2a2a2a!important;filter:contrast(1.1) saturate(1.15)!important}
+      button,[role=button]{background:linear-gradient(#3a3a3a,#222)!important;color:#00ff66!important;
+        border:2px outset #555!important;border-radius:0!important}
+      input[type=range],[role=slider]{accent-color:#00ff66!important}
+      h1,h2,h3{color:#aaff00!important}
+      body::before{
+        content:"\\25B6  N O T S C A P E   A M P     ${label}.MP3  [stereo]  128kbps  44khz     |<  <  ||  >  >|";
+        display:block!important;white-space:pre!important;pointer-events:none!important;
+        background:linear-gradient(#3a3a3a,#161616)!important;color:#00ff66!important;
+        font-family:'Lucida Console',monospace!important;font-size:12px!important;letter-spacing:1px!important;
+        padding:6px 10px!important;border-bottom:2px solid #00ff66!important}
+    `;
+  }
+
   const SKINS = [
     {
       name: 'Reddit BBS',
@@ -156,7 +185,7 @@
     {
       // YouTube circa 2005-2006: white, Verdana, blue links, "Broadcast Yourself"
       name: 'YouTube 2006',
-      test: (h) => /(^|\.)youtube\.com$/.test(h),
+      test: (h) => /(^|\.)youtube\.com$/.test(h) && !/(^|\.)music\.youtube\.com$/.test(h),
       css: () => `
         html,body{background:#ffffff!important;color:#000!important;background-image:none!important}
         html body,html body *{font-family:Verdana,Arial,Helvetica,sans-serif!important}
@@ -170,6 +199,13 @@
         ytd-app,#content,#page-manager{background:#fff!important}
         /* keep YouTube's own (un)sticky layout so the search box + menus stay clickable */
         [data-ns-unstick]{position:revert!important;top:revert!important;bottom:revert!important}
+        /* leave the video player + its controls alone (our bevel/frame mangles them) */
+        video{border:0!important;padding:0!important;background:transparent!important}
+        .html5-video-player .ytp-button,.ytp-chrome-bottom .ytp-button,button.ytp-button{
+          border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important;
+          width:auto!important;height:auto!important;padding:0!important}
+        .ytp-chrome-bottom,.ytp-chrome-controls,.ytp-progress-bar-container,.ytp-gradient-bottom{
+          border:0!important;background:none!important;box-shadow:none!important}
         body::before{
           content:""!important;display:block!important;height:60px!important;pointer-events:none!important;
           background:#ffffff url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='300'%20height='64'%3E%3Ctext%20x='2'%20y='46'%20font-family='Arial,Helvetica,sans-serif'%20font-size='42'%20font-weight='bold'%20fill='%23000000'%3EYou%3C/text%3E%3Crect%20x='86'%20y='10'%20rx='9'%20ry='9'%20width='118'%20height='44'%20fill='%23cc181e'/%3E%3Ctext%20x='96'%20y='46'%20font-family='Arial,Helvetica,sans-serif'%20font-size='42'%20font-weight='bold'%20fill='%23ffffff'%3ETube%3C/text%3E%3Ctext%20x='212'%20y='28'%20font-family='Arial'%20font-size='11'%20fill='%23999999'%3EBroadcast%3C/text%3E%3Ctext%20x='212'%20y='42'%20font-family='Arial'%20font-size='11'%20fill='%23999999'%3EYourself%E2%84%A2%3C/text%3E%3C/svg%3E") no-repeat 14px center!important;
@@ -201,6 +237,67 @@
           content:"\\2665 Tom is your #1 friend \\2665   \\2014   a place for friends"!important;
           display:block!important;pointer-events:none!important;background:#003399!important;color:#fff!important;
           text-align:center!important;padding:8px!important;font-family:Verdana,sans-serif!important;font-size:12px!important}
+      `
+    },
+    {
+      name: 'Winamp (Spotify)',
+      test: (h) => /(^|\.)spotify\.com$/.test(h),
+      css: () => winampCSS('SPOTIFY')
+    },
+    {
+      name: 'Winamp (YouTube Music)',
+      test: (h) => /(^|\.)music\.youtube\.com$/.test(h),
+      css: () => winampCSS('YTMUSIC')
+    },
+    {
+      // Google search circa 1998 — white, plain, colorful wordmark
+      name: 'Google 1998',
+      test: (h) => /(^|\.)google\.com$/.test(h) &&
+        !/(^|\.)(mail|docs|drive|meet|photos|news|maps|play|cloud)\.google\.com$/.test(h),
+      css: () => `
+        html,body{background:#fff!important;color:#000!important;background-image:none!important}
+        html body,html body *{font-family:Arial,Helvetica,sans-serif!important}
+        *{text-shadow:none!important;box-shadow:none!important;border-radius:0!important}
+        a,a:link{color:#0000cc!important;text-decoration:underline!important}
+        a:visited{color:#551a8b!important}
+        img{filter:none!important;image-rendering:auto!important}
+        input[type=text],input[type=search],textarea{border:1px solid #7e9bce!important;border-radius:0!important;background:#fff!important}
+        body::before{
+          content:""!important;display:block!important;height:58px!important;pointer-events:none!important;
+          background:#fff url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='240'%20height='60'%3E%3Ctext%20font-family='Arial,Helvetica,sans-serif'%20font-size='44'%20font-weight='bold'%20y='45'%3E%3Ctspan%20x='8'%20fill='%233366cc'%3EG%3C/tspan%3E%3Ctspan%20fill='%23dd0000'%3Eo%3C/tspan%3E%3Ctspan%20fill='%23ffcc00'%3Eo%3C/tspan%3E%3Ctspan%20fill='%233366cc'%3Eg%3C/tspan%3E%3Ctspan%20fill='%23109618'%3El%3C/tspan%3E%3Ctspan%20fill='%23dd0000'%3Ee%3C/tspan%3E%3C/text%3E%3C/svg%3E") no-repeat center 10px!important;
+          background-size:auto 34px!important;border-bottom:1px solid #e5e5e5!important}
+      `
+    },
+    {
+      name: 'Wikipedia as Encarta',
+      test: (h) => /(^|\.)wikipedia\.org$/.test(h),
+      css: () => `
+        html,body{background:#e8eef7!important;color:#000!important;background-image:none!important}
+        html body,html body *{font-family:'Times New Roman',Georgia,serif!important}
+        a,a:link{color:#0033aa!important;text-decoration:underline!important}
+        a:visited{color:#551a8b!important}
+        #content,.mw-body,main,#mw-content-text{background:#fff!important;border:2px solid #99a!important}
+        h1,h2,h3{font-family:Georgia,'Times New Roman',serif!important;color:#002080!important;border-bottom:1px solid #99a!important}
+        img{border:1px solid #88a!important}
+        body::before{
+          content:"📚 Notscape Encarta  ·  Multimedia Encyclopedia '96"!important;display:block!important;pointer-events:none!important;
+          background:linear-gradient(#3a5fa0,#1a2f60)!important;color:#fff!important;font-family:Georgia,serif!important;
+          font-size:22px!important;font-weight:bold!important;padding:10px 14px!important;border-bottom:3px solid #ffcc00!important}
+      `
+    },
+    {
+      name: 'X as Guestbook',
+      test: (h) => /(^|\.)twitter\.com$/.test(h) || /(^|\.)x\.com$/.test(h),
+      css: () => `
+        html,body{background:#ffffe8!important;color:#000!important;background-image:none!important}
+        html body,html body *{font-family:'Comic Sans MS','Trebuchet MS',cursive!important}
+        [data-ns-unstick]{position:revert!important;top:revert!important;bottom:revert!important}
+        a,a:link{color:#cc0066!important;text-decoration:underline!important}
+        article,[data-testid=tweet]{border:2px ridge #f9c!important;background:#fff0f8!important;margin:6px!important;padding:6px!important}
+        img{border:2px solid #f9c!important}
+        body::before{content:"✿ Welcome to my Guestbook! ✿  Please sign below! ✿"!important;display:block!important;pointer-events:none!important;
+          background:#ff66aa!important;color:#fff!important;font-weight:bold!important;text-align:center!important;
+          font-family:"Comic Sans MS",cursive!important;padding:10px!important;border-bottom:3px dotted #fff!important}
       `
     }
   ];

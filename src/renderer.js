@@ -42,6 +42,7 @@ const DEFAULT_CONFIG = {
   grayBg: true,
   tiledBg: false,
   comicSans: false,
+  retroMedia: true,
   // behavior
   killSticky: true,
   marquee: false,
@@ -56,13 +57,18 @@ const DEFAULT_CONFIG = {
   soundMail: true,
   // network / privacy
   blockAds: true,
+  allowAutoplay: false,
   safeMode: false,
-  spoofUA: false
+  spoofUA: false,
+  // flourishes
+  randomFlourishes: true
 };
 
 let config = Object.assign({}, DEFAULT_CONFIG);
 let bookmarks = [];
+let siteFlourishes = {}; // { host: [flourishKey,...] }
 let cssKey = null;          // handle for the currently inserted stylesheet
+let adCssKey = null;        // handle for the cosmetic ad-hiding stylesheet
 let engineInjected = false; // per-page: has the engine source been installed?
 let currentURL = HOME;
 let uaApplied = false;      // have we set our clean Chrome UA yet?
@@ -134,11 +140,22 @@ async function applyTransform() {
     return;
   }
 
+  const host = hostOf(currentURL);
+  // roll a random set of flourishes for sites we haven't seen this session
+  if (config.enabled && config.randomFlourishes && host && !(host in siteFlourishes)) {
+    siteFlourishes[host] = randomFlourishesFor();
+  }
+  const fkeys = siteFlourishes[host] || [];
+  const fset = new Set(fkeys);
+  // flourishes apply even when the master transform is off
+  const active = config.enabled || fkeys.length > 0;
+
   // 1) CSS layer (CSP-proof via insertCSS)
   await clearCSS();
-  if (config.enabled) {
-    const css = window.NotscapeStyles.build(config, hostOf(currentURL));
-    if (css) {
+  if (active) {
+    let css = config.enabled ? window.NotscapeStyles.build(config, host) : '';
+    css += '\n' + window.NotscapeFlourishes.css(fkeys);
+    if (css.trim()) {
       try { cssKey = await view.insertCSS(css); } catch (_) {}
     }
   }
@@ -149,10 +166,31 @@ async function applyTransform() {
       await view.executeJavaScript(ENGINE_SOURCE);
       engineInjected = true;
     }
-    if (config.enabled) {
-      await view.executeJavaScript(
-        'window.__NOTSCAPE__&&window.__NOTSCAPE__.apply(' + JSON.stringify(config) + ')'
-      );
+    if (active) {
+      const eff = config.enabled
+        ? Object.assign({}, config, {
+            flourishes: fkeys,
+            marquee: config.marquee || fset.has('scroll'),
+            construction: config.construction || fset.has('construction'),
+            hitCounter: config.hitCounter || fset.has('counter'),
+            webring: config.webring || fset.has('webring'),
+            guestbook: fset.has('guestbook'),
+            bestviewed: fset.has('bestviewed'),
+            awards: fset.has('awards'),
+            emailme: fset.has('emailme'),
+            midi: fset.has('midi')
+          })
+        : { enabled: false, flourishes: fkeys,
+            marquee: fset.has('scroll'),
+            construction: fset.has('construction'),
+            hitCounter: fset.has('counter'),
+            webring: fset.has('webring'),
+            guestbook: fset.has('guestbook'),
+            bestviewed: fset.has('bestviewed'),
+            awards: fset.has('awards'),
+            emailme: fset.has('emailme'),
+            midi: fset.has('midi') };
+      await view.executeJavaScript('window.__NOTSCAPE__&&window.__NOTSCAPE__.apply(' + JSON.stringify(eff) + ')');
     } else {
       await view.executeJavaScript('window.__NOTSCAPE__&&window.__NOTSCAPE__.reset()');
     }
@@ -164,6 +202,46 @@ async function clearCSS() {
     try { await view.removeInsertedCSS(cssKey); } catch (_) {}
     cssKey = null;
   }
+}
+
+// Cosmetic ad-hiding (complements the network blocklist in main)
+const AD_COSMETIC_CSS = [
+  'ins.adsbygoogle', '.adsbygoogle',
+  'iframe[src*="doubleclick.net"]', 'iframe[src*="googlesyndication"]', 'iframe[src*="/ads/"]',
+  'iframe[id^="google_ads"]', 'iframe[id^="aswift_"]', 'iframe[id^="ad_iframe"]',
+  '[id^="div-gpt-ad"]', '[id^="google_ads_iframe"]', '[id^="taboola-"]',
+  '[class*="advertisement"]', '[class*="ad-banner"]', '[class*="ad-slot"]', '[class*="-adslot"]',
+  '[class*="sponsored-"]', '[data-ad-slot]', '[data-ad-client]',
+  '[aria-label="Advertisement" i]', '[aria-label="Ad" i]'
+].join(',') + '{display:none!important}';
+
+async function applyAdCosmetics() {
+  if (adCssKey) { try { await view.removeInsertedCSS(adCssKey); } catch (_) {} adCssKey = null; }
+  if (config.blockAds && !isHome(currentURL) && !isAuthHost(hostOf(currentURL))) {
+    try { adCssKey = await view.insertCSS(AD_COSMETIC_CSS); } catch (_) {}
+  }
+}
+
+// Block media autoplay until the user interacts (unless they allow it)
+async function applyAutoplay() {
+  if (isHome(currentURL)) return;
+  const on = !config.allowAutoplay;
+  try {
+    await view.executeJavaScript(
+      '(function(){var on=' + (on ? 'true' : 'false') + ';' +
+      'if(window.__NSAP__){window.__NSAP__.on=on;return;}' +
+      'var st={on:on,interacted:false};window.__NSAP__=st;' +
+      '["pointerdown","keydown","touchstart"].forEach(function(ev){document.addEventListener(ev,function(){st.interacted=true;},true);});' +
+      'document.addEventListener("play",function(e){if(!st.on||st.interacted)return;var m=e.target;' +
+      'if(m&&(m.tagName==="VIDEO"||m.tagName==="AUDIO")){try{m.pause();}catch(_){}}},true);' +
+      '})()'
+    );
+  } catch (_) {}
+}
+
+async function applyPagePolicies() {
+  await applyAdCosmetics();
+  await applyAutoplay();
 }
 
 // ---------------------------------------------------------------------------
@@ -272,11 +350,13 @@ view.addEventListener('dom-ready', () => {
 // inject as early as the DOM allows, then re-affirm when fully loaded
 view.addEventListener('dom-ready', async () => {
   await applyTransform();
+  applyPagePolicies();
   // reveal only after the injected CSS has had a frame to paint
   requestAnimationFrame(() => requestAnimationFrame(hideCover));
 });
 view.addEventListener('did-finish-load', async () => {
   await applyTransform();
+  applyPagePolicies();
   hideCover();
   detectBuilder();
 });
@@ -346,16 +426,122 @@ function buildMasterToggle() {
   t.id = 'master-toggle';
   t.title = 'Toggle the Old Internet';
   t.innerHTML = '<span class="lamp"></span> Old Internet: <b>ON</b>';
-  t.addEventListener('click', () => {
-    config.enabled = !config.enabled;
-    syncMasterToggle();
-    saveConfig();
-    applyTransform();
-    syncModsPanel();
-  });
+  t.addEventListener('click', toggleMaster);
   const toolbar = document.getElementById('toolbar');
   toolbar.insertBefore(t, document.getElementById('throbber'));
 }
+function toggleMaster() {
+  config.enabled = !config.enabled;
+  syncMasterToggle();
+  saveConfig();
+  applyTransform();
+  syncModsPanel();
+}
+
+// ---------------------------------------------------------------------------
+// Menu-bar dropdowns (File / Edit / View / Go / Bookmarks / Help)
+// ---------------------------------------------------------------------------
+function devtoolsToggle() {
+  try { view.isDevToolsOpened() ? view.closeDevTools() : view.openDevTools(); } catch (_) {}
+}
+function doEdit(cmd) {
+  const ae = document.activeElement;
+  if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) {
+    if (cmd === 'selectAll') ae.select(); else { try { document.execCommand(cmd); } catch (_) {} }
+    return;
+  }
+  try { if (typeof view[cmd] === 'function') view[cmd](); } catch (_) {}
+}
+const MENUS = {
+  file: () => [
+    { label: 'Start Page', action: () => navigate('home') },
+    { label: 'Reload', action: () => (currentURL === HOME ? window.NotscapeHome.reload() : view.reload()) },
+    { label: 'Stop', action: () => view.stop() },
+    { sep: true },
+    { label: 'Print…', action: () => { try { view.print(); } catch (_) {} } },
+    { sep: true },
+    { label: 'Exit', action: () => window.notscape.windowControl('close') }
+  ],
+  edit: () => [
+    { label: 'Cut', action: () => doEdit('cut') },
+    { label: 'Copy', action: () => doEdit('copy') },
+    { label: 'Paste', action: () => doEdit('paste') },
+    { label: 'Select All', action: () => doEdit('selectAll') },
+    { sep: true },
+    { label: 'Preferences…', action: openPrefs }
+  ],
+  view: () => [
+    { label: 'Back', action: () => { if (view.canGoBack()) { hideHome(); view.goBack(); } }, disabled: !view.canGoBack() },
+    { label: 'Forward', action: () => { if (view.canGoForward()) { hideHome(); view.goForward(); } }, disabled: !view.canGoForward() },
+    { label: 'Reload', action: () => view.reload() },
+    { sep: true },
+    { label: (config.enabled ? '✓ ' : ' ') + 'Old Internet', action: toggleMaster },
+    { sep: true },
+    { label: 'Mods…', action: openMods },
+    { label: 'Flourishes…', action: openFlourishes },
+    { sep: true },
+    { label: 'Developer Tools', action: devtoolsToggle }
+  ],
+  go: () => [
+    { label: 'Back', action: () => { if (view.canGoBack()) { hideHome(); view.goBack(); } }, disabled: !view.canGoBack() },
+    { label: 'Forward', action: () => { if (view.canGoForward()) { hideHome(); view.goForward(); } }, disabled: !view.canGoForward() },
+    { label: 'Start Page', action: () => navigate('home') }
+  ],
+  bookmarks: () => {
+    const items = [
+      { label: '➕ Add This Page', action: addCurrentBookmark, disabled: isHome(currentURL) },
+      { label: 'Show Start Page', action: () => navigate('home') }
+    ];
+    if (bookmarks.length) {
+      items.push({ sep: true });
+      bookmarks.forEach((bm) => items.push({ label: bm.title, action: () => navigate(bm.url) }));
+    }
+    return items;
+  },
+  help: () => [
+    { label: 'About Notscape…', action: () => openOverlay('about-overlay') },
+    { label: 'Tiny User Guide…', action: () => openOverlay('about-overlay') }
+  ]
+};
+let openMenuKey = null;
+function closeMenus() {
+  const dd = document.getElementById('menu-dropdown');
+  if (dd) dd.remove();
+  document.querySelectorAll('#menubar .menu-item.open').forEach((m) => m.classList.remove('open'));
+  openMenuKey = null;
+}
+function openMenu(key, anchor) {
+  closeMenus();
+  const def = MENUS[key];
+  if (!def) return;
+  const dd = document.createElement('div');
+  dd.id = 'menu-dropdown';
+  def().forEach((it) => {
+    if (it.sep) { const s = document.createElement('div'); s.className = 'menu-sep'; dd.appendChild(s); return; }
+    const el = document.createElement('div');
+    el.className = 'menu-entry' + (it.disabled ? ' disabled' : '');
+    el.textContent = it.label;
+    if (!it.disabled) el.addEventListener('click', (e) => { e.stopPropagation(); closeMenus(); it.action(); });
+    dd.appendChild(el);
+  });
+  document.body.appendChild(dd);
+  const r = anchor.getBoundingClientRect();
+  dd.style.left = Math.round(r.left) + 'px';
+  dd.style.top = Math.round(r.bottom) + 'px';
+  anchor.classList.add('open');
+  openMenuKey = key;
+}
+document.querySelectorAll('#menubar .menu-item[data-menu]').forEach((mi) => {
+  mi.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const key = mi.dataset.menu;
+    if (openMenuKey === key) closeMenus(); else openMenu(key, mi);
+  });
+  mi.addEventListener('mouseenter', () => {
+    if (openMenuKey && openMenuKey !== mi.dataset.menu) openMenu(mi.dataset.menu, mi);
+  });
+});
+document.addEventListener('click', () => { if (openMenuKey) closeMenus(); });
 function syncMasterToggle() {
   const t = document.getElementById('master-toggle');
   t.classList.toggle('off', !config.enabled);
@@ -378,49 +564,179 @@ function renderBookmarks() {
     const el = document.createElement('span');
     el.className = 'bm';
     el.innerHTML = '<span class="fav">N</span>' + escapeHtml(bm.title);
-    el.title = bm.url;
+    el.title = bm.url + '  (right-click to remove)';
     el.addEventListener('click', () => navigate(bm.url));
-    el.addEventListener('contextmenu', (ev) => {
-      ev.preventDefault();
-      bookmarks.splice(i, 1);
-      window.notscape.setBookmarks(bookmarks);
-      renderBookmarks();
-    });
+    el.addEventListener('contextmenu', (ev) => { ev.preventDefault(); removeBookmark(i); });
     bookmarksBar.appendChild(el);
   });
+  renderHomeBookmarks();
+}
+function renderHomeBookmarks() {
+  const ul = document.getElementById('hs-bookmarks');
+  if (!ul) return;
+  if (!bookmarks.length) {
+    ul.innerHTML = '<li class="hs-bm-empty">No bookmarks yet &mdash; visit a page and click <b>➕ Add</b>.</li>';
+    return;
+  }
+  ul.innerHTML = bookmarks.map((bm, i) =>
+    '<li><span class="hs-bm-link" data-bm="' + i + '">' + escapeHtml(bm.title) + '</span>' +
+    '<span class="hs-bm-del" data-del="' + i + '" title="Remove">✕</span></li>'
+  ).join('');
+}
+function removeBookmark(i) {
+  if (i < 0 || i >= bookmarks.length) return;
+  bookmarks.splice(i, 1);
+  window.notscape.setBookmarks(bookmarks);
+  renderBookmarks();
 }
 function addCurrentBookmark() {
-  const url = isHome(currentURL) ? 'home' : currentURL;
-  const title = (winTitle.textContent || url).replace(/ — Notscape$/, '').slice(0, 40) || url;
-  if (bookmarks.some((b) => b.url === url)) return;
+  if (isHome(currentURL)) { statusText.textContent = 'Open a page first — then ➕ Add bookmarks it.'; return; }
+  const url = currentURL;
+  const title = (winTitle.textContent || url).replace(/ — Notscape$/, '').slice(0, 50) || url;
+  if (bookmarks.some((b) => b.url === url)) { statusText.textContent = 'Already bookmarked: ' + title; return; }
   bookmarks.push({ title, url });
   window.notscape.setBookmarks(bookmarks);
   renderBookmarks();
+  statusText.textContent = '★ Bookmarked: ' + title;
 }
 function escapeHtml(s) {
   return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
+// start-page bookmarks: open / remove
+(function () {
+  const ul = document.getElementById('hs-bookmarks');
+  if (!ul) return;
+  ul.addEventListener('click', (e) => {
+    const link = e.target.closest('.hs-bm-link');
+    if (link) { const i = parseInt(link.dataset.bm, 10); if (bookmarks[i]) navigate(bookmarks[i].url); return; }
+    const del = e.target.closest('[data-del]');
+    if (del) removeBookmark(parseInt(del.dataset.del, 10));
+  });
+})();
 
-document.getElementById('bookmarks-menu').addEventListener('click', () => navigate('home'));
+// ---------------------------------------------------------------------------
+// Dialogs: Preferences (Edit), About (Help), Flourishes (per-site)
+// ---------------------------------------------------------------------------
+function openOverlay(id) { const el = document.getElementById(id); if (el) el.hidden = false; }
+function closeOverlay(id) { const el = document.getElementById(id); if (el) el.hidden = true; }
+document.querySelectorAll('.mp-close').forEach((b) =>
+  b.addEventListener('click', () => closeOverlay(b.dataset.close)));
+document.querySelectorAll('.ns-overlay').forEach((ov) =>
+  ov.addEventListener('click', (e) => { if (e.target === ov) ov.hidden = true; }));
+
+document.getElementById('flourishes-btn').addEventListener('click', openFlourishes);
+document.getElementById('fx-reshuffle').addEventListener('click', reshuffleFlourishes);
+
+// --- Preferences ---
+function openPrefs() {
+  const sn = document.getElementById('pref-screenname');
+  if (sn) window.notscape.getAccount().then((a) => { sn.value = (a && a.screenName) || 'saxman103'; });
+  document.getElementById('blockAds').checked = !!config.blockAds;
+  document.getElementById('allowAutoplay').checked = !!config.allowAutoplay;
+  document.getElementById('safeMode').checked = !!config.safeMode;
+  document.getElementById('prefRandomFlourishes').checked = !!config.randomFlourishes;
+  openOverlay('prefs-overlay');
+}
+(function wirePrefs() {
+  const sn = document.getElementById('pref-screenname');
+  if (sn) {
+    const save = () => {
+      const name = (sn.value || 'saxman103').trim() || 'saxman103';
+      window.notscape.setAccount({ screenName: name });
+      const hn = document.getElementById('hs-name');
+      if (hn) hn.textContent = name;
+    };
+    sn.addEventListener('change', save);
+    sn.addEventListener('blur', save);
+  }
+  const ab = document.getElementById('blockAds');
+  if (ab) ab.addEventListener('change', () => {
+    config.blockAds = ab.checked; saveConfig();
+    window.notscape.setBlockAds(ab.checked); view.reload();
+  });
+  const sm = document.getElementById('safeMode');
+  if (sm) sm.addEventListener('change', () => {
+    config.safeMode = sm.checked; saveConfig();
+    window.notscape.setSafeMode(sm.checked); view.reload();
+  });
+  const rf = document.getElementById('prefRandomFlourishes');
+  if (rf) rf.addEventListener('change', () => { config.randomFlourishes = rf.checked; saveConfig(); });
+  const ap = document.getElementById('allowAutoplay');
+  if (ap) ap.addEventListener('change', () => { config.allowAutoplay = ap.checked; saveConfig(); applyAutoplay(); });
+})();
+
+// --- Flourishes (per current site) ---
+function openFlourishes() { buildFlourishList(); openOverlay('flourishes-overlay'); }
+function buildFlourishList() {
+  const host = hostOf(currentURL);
+  const list = document.getElementById('fx-list');
+  const note = document.getElementById('fx-host');
+  if (!host || isHome(currentURL)) {
+    list.className = 'fx-disabled';
+    list.innerHTML = '';
+    note.innerHTML = 'Open a website first &mdash; flourishes attach to a specific site.';
+    return;
+  }
+  list.className = '';
+  note.innerHTML = 'Pick flourishes for <b>' + escapeHtml(host) + '</b> &mdash; they stick to it and return every visit.';
+  const active = new Set(siteFlourishes[host] || []);
+  list.innerHTML = window.NotscapeFlourishes.list.map((f) =>
+    '<label><input type="checkbox" data-fx="' + f.key + '"' + (active.has(f.key) ? ' checked' : '') + '> ' +
+    escapeHtml(f.name) + '<span class="fx-desc">' + escapeHtml(f.desc) + '</span></label>'
+  ).join('');
+  list.querySelectorAll('input[data-fx]').forEach((cb) =>
+    cb.addEventListener('change', () => toggleFlourish(host, cb.dataset.fx, cb.checked)));
+}
+function toggleFlourish(host, key, on) {
+  let arr = siteFlourishes[host] ? siteFlourishes[host].slice() : [];
+  if (on) { if (arr.indexOf(key) < 0) arr.push(key); }
+  else { arr = arr.filter((k) => k !== key); }
+  // keep an entry (even empty) so we don't re-roll random flourishes on top
+  siteFlourishes[host] = arr;
+  applyTransform();
+}
+// roll 1–3 random flourishes from the library
+function randomFlourishesFor() {
+  // "under construction" is loud — keep it out of the normal pool and add it only ~1/3
+  const keys = window.NotscapeFlourishes.list.map((f) => f.key).filter((k) => k !== 'construction');
+  const count = 1 + Math.floor(Math.random() * 3);
+  const pool = keys.slice();
+  const chosen = [];
+  for (let n = 0; n < count && pool.length; n++) {
+    chosen.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  }
+  if (Math.random() < 0.34) chosen.push('construction');
+  return chosen;
+}
+function reshuffleFlourishes() {
+  const host = hostOf(currentURL);
+  if (!host || isHome(currentURL)) return;
+  siteFlourishes[host] = randomFlourishesFor();
+  buildFlourishList();
+  applyTransform();
+}
 
 // ---------------------------------------------------------------------------
 // Mods panel
 // ---------------------------------------------------------------------------
 const overlay = document.getElementById('mods-overlay');
 const CHECKS = ['siteSkins', 'oldFonts', 'flatten', 'beveled', 'retroLinks', 'grayBg', 'tiledBg',
-  'comicSans', 'killSticky', 'marquee', 'blink', 'construction', 'hitCounter', 'webring', 'dither',
-  'soundWelcome', 'soundMail', 'blockAds', 'safeMode', 'spoofUA'];
+  'comicSans', 'retroMedia', 'killSticky', 'marquee', 'blink', 'construction', 'hitCounter', 'webring', 'dither',
+  'soundWelcome', 'soundMail', 'spoofUA'];
 const SLIDERS = ['age', 'pixelation', 'colorDepth'];
 
 function openMods() { syncModsPanel(); overlay.hidden = false; }
 function closeMods() { overlay.hidden = true; }
 document.getElementById('mods').addEventListener('click', openMods);
-document.getElementById('mods-menu-btn').addEventListener('click', openMods);
 document.getElementById('mods-close').addEventListener('click', closeMods);
 overlay.addEventListener('click', (e) => { if (e.target === overlay) closeMods(); });
 // safety net + handy browser shortcuts
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !overlay.hidden) closeMods();
+  if (e.key === 'Escape') {
+    if (openMenuKey) closeMenus();
+    if (!overlay.hidden) closeMods();
+    document.querySelectorAll('.ns-overlay').forEach((ov) => { ov.hidden = true; });
+  }
   if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'i')) {
     e.preventDefault();
     try { view.isDevToolsOpened() ? view.closeDevTools() : view.openDevTools(); } catch (_) {}
@@ -550,7 +866,8 @@ if (clearBtn) {
   clearBtn.addEventListener('click', async () => {
     clearBtn.disabled = true;
     const ok = await window.notscape.clearData();
-    statusText.textContent = ok ? 'Cleared cookies, cache & history.' : 'Could not clear data.';
+    siteFlourishes = {}; // reset per-site flourishes too
+    statusText.textContent = ok ? 'Cleared cookies, cache, history & flourishes.' : 'Could not clear data.';
     clearBtn.disabled = false;
   });
 }
@@ -578,12 +895,16 @@ let assetDirs = [new URL('../assets/', location.href).href];
 function playSound(file, fallbackText) {
   const urls = assetDirs.map((d) => d + file);
   let i = 0;
+  let settled = false; // once a real file plays, never fall back to TTS
   const tryNext = () => {
-    if (i >= urls.length) { speak(fallbackText); return; }
+    if (settled) return;
+    if (i >= urls.length) { settled = true; speak(fallbackText); return; }
     const audio = new Audio(urls[i++]);
-    audio.addEventListener('error', tryNext, { once: true });
+    let advanced = false; // a single candidate must only advance once
+    const fail = () => { if (!advanced) { advanced = true; tryNext(); } };
+    audio.addEventListener('error', fail, { once: true });
     const p = audio.play();
-    if (p && p.catch) p.catch(tryNext);
+    if (p && p.then) p.then(() => { settled = true; }).catch(fail);
   };
   tryNext();
 }
@@ -623,6 +944,7 @@ async function init() {
   window.notscape.setBlockAds(config.blockAds);
   window.notscape.setSafeMode(config.safeMode);
   bookmarks = await window.notscape.getBookmarks();
+  siteFlourishes = {}; // session-only: random flourishes reset on restart
   buildMasterToggle();
   syncMasterToggle();
   renderBookmarks();

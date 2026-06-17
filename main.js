@@ -29,7 +29,23 @@ const AD_HOSTS = [
   'smartadserver.com', 'yieldmo.com', 'indexww.com', 'adform.net', 'connect.facebook.net',
   'analytics.tiktok.com', 'hotjar.com', 'mixpanel.com', 'fullstory.com', 'mouseflow.com',
   'clarity.ms', 'demdex.net', 'omtrdc.net', '2o7.net', 'everesttech.net', 'bluekai.com',
-  'rlcdn.com', 'adroll.com', 'crazyegg.com', 'segment.io', 'branch.io'
+  'rlcdn.com', 'adroll.com', 'crazyegg.com', 'segment.io', 'branch.io',
+  // strengthened: more ad exchanges / SSPs / DSPs
+  'advertising.com', 'adtechus.com', 'contextweb.com', 'gumgum.com', 'districtm.io',
+  'sonobi.com', 'spotxchange.com', 'spotx.tv', 'tremorhub.com', 'serving-sys.com',
+  'flashtalking.com', 'mathtag.com', 'mediamath.com', 'tapad.com', 'liveramp.com',
+  'crwdcntrl.net', 'exelator.com', 'eyeota.net', 'zemanta.com', 'revcontent.com',
+  'mgid.com', 'adblade.com', 'dianomi.com', 'plista.com', 'ligatus.com', 'undertone.com',
+  'popads.net', 'popcash.net', 'propellerads.com', 'adcash.com', 'exoclick.com',
+  'juicyads.com', 'infolinks.com', 'chitika.com', 'media.net', 'viglink.com',
+  'skimresources.com', 'zergnet.com', 'bidr.io', 'gravity.com', 'yieldlab.net',
+  // more trackers / analytics / tag managers
+  'chartbeat.com', 'parsely.com', 'permutive.com', 'cxense.com', 'sail-horizon.com',
+  'krxd.net', 'tealiumiq.com', 'amplitude.com', 'heap.io', 'pendo.io', 'marketo.net',
+  'pardot.com', 'addthis.com', 'sharethis.com', 'nr-data.net', 'newrelic.com',
+  'sentry-cdn.com', 'bugsnag.com', 'optimizely.com', 'bizible.com', 'demandbase.com',
+  'doubleverify.com', 'adsafeprotected.com', 'agkn.com', 'rfihub.com', 'simpli.fi',
+  'stickyadstv.com', 'smartadserver.net', 'pixel.facebook.com', 'an.facebook.com'
 ];
 
 function isAdHost(url) {
@@ -224,6 +240,10 @@ const DEFAULT_FEEDS = [
 ];
 ipcMain.handle('feeds:get', () => readJson('feeds.json', DEFAULT_FEEDS));
 ipcMain.handle('feeds:set', (_e, data) => writeJson('feeds.json', data));
+
+// per-site flourishes: { "host": ["starfield","snow",...] }
+ipcMain.handle('flourishes:get', () => readJson('flourishes.json', {}));
+ipcMain.handle('flourishes:set', (_e, data) => writeJson('flourishes.json', data));
 
 // Fetch a feed from the main process so we sidestep the webview's CORS rules.
 ipcMain.handle('rss:fetch', async (_e, url) => {

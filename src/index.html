@@ -26,9 +26,8 @@
       <span class="menu-item" data-menu="file">File</span>
       <span class="menu-item" data-menu="edit">Edit</span>
       <span class="menu-item" data-menu="view">View</span>
-      <span class="menu-item" id="go-menu">Go</span>
-      <span class="menu-item" id="bookmarks-menu">Bookmarks</span>
-      <span class="menu-item" id="mods-menu-btn">Mods</span>
+      <span class="menu-item" data-menu="go">Go</span>
+      <span class="menu-item" data-menu="bookmarks">Bookmarks</span>
       <span class="menu-item" data-menu="help">Help</span>
     </div>
 
@@ -40,6 +39,7 @@
       <button id="stop" class="tbtn">Stop</button>
       <button id="home" class="tbtn">Home</button>
       <button id="mods" class="tbtn star">★ Mods</button>
+      <button id="flourishes-btn" class="tbtn star">✨ Flourishes</button>
       <div class="spacer"></div>
       <div id="throbber" title="Notscape">
         <div class="sky"></div>
@@ -114,6 +114,8 @@
                 <button type="submit">Add</button>
               </form>
               <ul id="hs-feedlist"></ul>
+              <div class="hs-bar">⭐ My Bookmarks</div>
+              <ul id="hs-bookmarks"><li class="hs-bm-empty">No bookmarks yet &mdash; visit a page and click <b>➕ Add</b>.</li></ul>
               <div class="hs-bar">🌦️ Today</div>
               <p class="hs-today">
                 <b>Date:</b> <span id="hs-clock">&hellip;</span><br />
@@ -205,6 +207,7 @@
           <label><input type="checkbox" id="grayBg" /> Gray (#c0c0c0) background</label>
           <label><input type="checkbox" id="tiledBg" /> Tiled wallpaper background (keeps text readable)</label>
           <label><input type="checkbox" id="comicSans" /> Comic Sans EVERYTHING</label>
+          <label><input type="checkbox" id="retroMedia" /> RealPlayer/QuickTime-style audio &amp; video chrome</label>
         </fieldset>
 
         <fieldset>
@@ -231,18 +234,44 @@
         </fieldset>
 
         <fieldset>
-          <legend>Network &amp; Ads</legend>
-          <label><input type="checkbox" id="blockAds" /> Block ads &amp; trackers (recommended)</label>
+          <legend>Network</legend>
           <label><input type="checkbox" id="spoofUA" /> Pretend to be Netscape 4 (reloads page)</label>
+          <p class="mp-hint">Ad-blocking, Safe Mode and your screen name now live in
+            <b>Edit &rarr; Preferences</b>.</p>
+        </fieldset>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREFERENCES (Edit menu) -->
+  <div id="prefs-overlay" class="ns-overlay" hidden>
+    <div class="ns-panel">
+      <div class="mp-title"><span>Preferences</span><button class="mp-close" data-close="prefs-overlay">×</button></div>
+      <div class="mp-body">
+        <fieldset>
+          <legend>Account</legend>
+          <label class="pref-row">Screen name:
+            <input type="text" id="pref-screenname" maxlength="24" spellcheck="false" autocomplete="off" />
+          </label>
+          <p class="mp-hint">Used on the sign-on dialog and your start-page greeting.</p>
+        </fieldset>
+        <fieldset>
+          <legend>Flourishes</legend>
+          <label><input type="checkbox" id="prefRandomFlourishes" /> Auto-add random 90s flourishes to each site
+            (kept until restart or Clear Data)</label>
         </fieldset>
 
+        <fieldset>
+          <legend>Ads &amp; Network</legend>
+          <label><input type="checkbox" id="blockAds" /> Block ads &amp; trackers (recommended). <i>Reloads.</i></label>
+          <label><input type="checkbox" id="allowAutoplay" /> Allow media to autoplay (unchecked = wait for a click)</label>
+        </fieldset>
         <fieldset>
           <legend>Privacy &amp; Safety</legend>
           <label><input type="checkbox" id="safeMode" /> Safe Mode &mdash; keep sites' security headers
             (CSP / X-Frame). Safer for logins, but some skins won't apply. <i>Reloads.</i></label>
           <p class="mp-hint">Notscape does <b>not</b> store passwords, and the sign-on dialog is fake.
-            It does keep cookies like any browser. For sensitive logins (banking, email) prefer your
-            normal browser, or turn on Safe Mode above first.</p>
+            It keeps cookies like any browser. For sensitive logins prefer your normal browser or Safe Mode.</p>
           <div class="presets" style="margin-top:6px">
             <button id="clearData">Clear cookies, cache &amp; history</button>
           </div>
@@ -251,8 +280,52 @@
     </div>
   </div>
 
+  <!-- FLOURISHES (per-site) -->
+  <div id="flourishes-overlay" class="ns-overlay" hidden>
+    <div class="ns-panel">
+      <div class="mp-title"><span>✨ Flourishes</span><button class="mp-close" data-close="flourishes-overlay">×</button></div>
+      <div class="mp-body">
+        <p class="mp-hint" id="fx-host">Each site gets a random handful of flourishes, kept until restart or
+          Clear Data. Hit Reshuffle, or tick/untick to customize <b>this site</b>.</p>
+        <div class="presets" style="margin-bottom:6px">
+          <button id="fx-reshuffle">🎲 Reshuffle this site</button>
+        </div>
+        <div id="fx-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ABOUT (Help menu) -->
+  <div id="about-overlay" class="ns-overlay" hidden>
+    <div class="ns-panel">
+      <div class="mp-title"><span>About Notscape</span><button class="mp-close" data-close="about-overlay">×</button></div>
+      <div class="mp-body">
+        <div class="about-head">
+          <span class="about-logo">N</span>
+          <div><b>Notscape</b> <span id="about-version">0.5.0</span><br />
+            <i>The browser that makes every website look like the old internet.</i></div>
+        </div>
+        <hr />
+        <b>Tiny user guide</b>
+        <ul class="guide">
+          <li><b>Sign On</b> at launch, then type a URL in the <b>Location:</b> bar (or search).</li>
+          <li><b>Old Internet: ON/OFF</b> (toolbar) toggles the whole retro look.</li>
+          <li><b>★ Mods</b> &mdash; presets, sliders (Vintage, GeoCities-ify) and look toggles.</li>
+          <li><b>✨ Flourishes</b> &mdash; starfields, snow, sparkle cursors &amp; more, remembered per site.</li>
+          <li><b>➕ Add</b> (bookmarks bar) saves the current page; bookmarks also appear on your start page.</li>
+          <li>The <b>start page</b> is an RSS reader &mdash; add channels in the right-hand panel.</li>
+          <li><b>Edit &rarr; Preferences</b> &mdash; screen name, ad-blocking, Safe Mode, clear data.</li>
+          <li>Keys: <b>F5</b> reload &middot; <b>Ctrl+L</b> address bar &middot; <b>F12</b> devtools &middot; <b>Esc</b> close.</li>
+        </ul>
+        <hr />
+        <p class="mp-hint">Made with &lt;3 and too many &lt;table&gt; tags. MIT licensed.</p>
+      </div>
+    </div>
+  </div>
+
   <script src="inject/engine.js"></script>
   <script src="inject/styles.js"></script>
+  <script src="inject/flourishes.js"></script>
   <script src="home.js"></script>
   <script src="renderer.js"></script>
 </body>

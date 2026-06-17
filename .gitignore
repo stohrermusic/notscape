@@ -1,0 +1,8 @@
+node_modules/
+*.log
+# build output (installers / packaged app)
+dist/
+# user-dropped audio (optional, often large / copyrighted)
+assets/*.wav
+assets/*.mp3
+assets/*.ogg

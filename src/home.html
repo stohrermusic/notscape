@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Notscape NetCenter</title>
+  <style>
+    body {
+      margin: 0; padding: 0; color: #000;
+      font-family: 'Times New Roman', Times, serif;
+      background-color: #008080;
+      background-image:
+        repeating-linear-gradient(45deg, rgba(255,255,255,.03) 0 10px, transparent 10px 20px);
+    }
+    a { color: #0000ee; }
+    a:visited { color: #551a8b; }
+    .page { max-width: 760px; margin: 0 auto; background: #c0c0c0;
+      border: 2px solid; border-color: #fff #404040 #404040 #fff; }
+    .masthead {
+      background: linear-gradient(180deg, #000080, #1084d0);
+      color: #fff; text-align: center; padding: 14px; border-bottom: 3px ridge #88f;
+    }
+    .masthead h1 { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 44px;
+      font-style: italic; letter-spacing: 1px; text-shadow: 2px 2px 0 #000040; }
+    .masthead .tag { font-family: 'Courier New', monospace; font-size: 12px; color: #aef; }
+    marquee.welcome { background: #000; color: #00ff66; font-family: 'Courier New', monospace;
+      padding: 4px; border-bottom: 2px solid #00ff66; }
+    .searchbox { text-align: center; padding: 16px; background: #d4d0c8; border-bottom: 2px groove #fff; }
+    .searchbox input[type=text] { width: 60%; padding: 5px; font-size: 14px;
+      border: 2px inset #c0c0c0; font-family: inherit; }
+    .searchbox input[type=submit] { padding: 5px 14px; font-family: inherit;
+      border: 2px outset #c0c0c0; background: #c0c0c0; font-weight: bold; }
+    .cols { display: flex; gap: 0; }
+    .col { flex: 1; padding: 12px 16px; }
+    .col + .col { border-left: 2px groove #fff; }
+    h2 { font-size: 16px; background: #000080; color: #fff; padding: 3px 8px; margin: 0 0 8px;
+      font-family: 'MS Sans Serif', Tahoma, sans-serif; }
+    ul { margin: 0 0 14px; padding-left: 20px; line-height: 1.7; }
+    .badge { display: inline-block; background: #ffcc00; color: #000; border: 1px solid #000;
+      font: bold 10px 'MS Sans Serif', sans-serif; padding: 0 4px; vertical-align: middle; }
+    .new { color: #ff0000; font: bold 10px sans-serif; }
+    .footer { text-align: center; padding: 12px; background: #000; color: #00ff66;
+      font-family: 'Courier New', monospace; font-size: 12px; border-top: 2px solid #00ff66; }
+    .counter span { display: inline-block; background: #111; color: #33ff33; border: 1px solid #0a0;
+      padding: 1px 4px; margin: 0 1px; font-weight: bold; }
+    .webring { background: #000080; color: #fff; text-align: center; padding: 8px;
+      font-family: 'MS Sans Serif', Tahoma, sans-serif; }
+    .webring a { color: #ffff00; }
+    .tip { font-size: 11px; color: #404040; text-align: center; padding: 6px; font-family: sans-serif; }
+    hr { border: 0; border-top: 2px groove #fff; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="masthead">
+      <h1>Notscape</h1>
+      <div class="tag">N&nbsp;E&nbsp;T&nbsp;C&nbsp;E&nbsp;N&nbsp;T&nbsp;E&nbsp;R &nbsp;&middot;&nbsp; your start page on The Old Internet</div>
+    </div>
+
+    <marquee class="welcome" scrollamount="6">
+      ★ Welcome, web surfer! ★ The Old Internet lives! ★ 56k and proud ★ Open the ★ Mods menu to tune the nostalgia ★ Right-click a bookmark to remove it ★
+    </marquee>
+
+    <div class="searchbox">
+      <form action="https://lite.duckduckgo.com/lite/" method="get">
+        <b>Search the Web:</b><br /><br />
+        <input type="text" name="q" autofocus placeholder="dancing baby gif" />
+        <input type="submit" value="Search!" />
+      </form>
+    </div>
+
+    <div class="cols">
+      <div class="col">
+        <h2>📁 Web Directory</h2>
+        <ul>
+          <li><a href="https://en.wikipedia.org/">Reference</a> <span class="badge">HOT</span></li>
+          <li><a href="https://news.ycombinator.com/">News &amp; Tech</a></li>
+          <li><a href="https://www.gutenberg.org/">Books</a></li>
+          <li><a href="https://archive.org/">Archives</a> <span class="new">NEW!</span></li>
+          <li><a href="https://www.reddit.com/">Message Boards</a></li>
+          <li><a href="https://www.nytimes.com/">Newspapers</a></li>
+        </ul>
+        <h2>🕹️ Just for Fun</h2>
+        <ul>
+          <li><a href="https://www.spacejam.com/1996/">Space Jam (1996)</a></li>
+          <li><a href="https://motherfuckingwebsite.com/">A Perfect Website</a></li>
+          <li><a href="https://www.youtube.com/">Notscape TV</a></li>
+          <li><a href="https://www.facebook.com/">Facebook (as MySpace)</a></li>
+        </ul>
+      </div>
+
+      <div class="col">
+        <h2>⭐ What's Cool</h2>
+        <p style="font-size:13px;line-height:1.6">
+          Try the <b>★ Mods</b> button up top. Hit <b>GeoCities!!!</b> for the full
+          1996 experience &mdash; marquees, hit counters, tiled starfields, and
+          Comic Sans as far as the eye can see.
+        </p>
+        <p style="font-size:13px;line-height:1.6">
+          Visit <a href="https://www.reddit.com/">a message board</a> to see it reborn
+          as a <b>BBS</b>, or <a href="https://www.nytimes.com/">the newspaper</a> as a
+          1995 broadsheet.
+        </p>
+        <h2>🌦️ Today</h2>
+        <p style="font-size:13px"><b>Date:</b> <span id="clock">loading...</span><br />
+           <b>Connection:</b> 56,600 bps<br />
+           <b>You have:</b> 0 new messages</p>
+      </div>
+    </div>
+
+    <div class="webring">
+      This site is part of the <b>Old Web Webring</b><br />
+      [ <a href="#">&laquo; Prev</a> | <a href="#">Random</a> | <a href="#">Next &raquo;</a> ]
+    </div>
+
+    <div class="footer">
+      <div class="counter">
+        You are visitor number
+        <span>0</span><span>0</span><span>2</span><span>4</span><span>6</span><span>0</span><span>1</span>
+      </div>
+      <br />
+      🚧 Best viewed in Notscape Navigator at 800&times;600 🚧
+    </div>
+
+    <div class="tip">Notscape &copy; 1996&ndash;2026 &middot; Made with &lt;3 and too many &lt;table&gt; tags</div>
+  </div>
+
+  <script>
+    (function () {
+      var el = document.getElementById('clock');
+      function tick() {
+        var d = new Date();
+        el.textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+      }
+      tick();
+      setInterval(tick, 1000);
+    })();
+  </script>
+</body>
+</html>

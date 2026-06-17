@@ -1,0 +1,57 @@
+{
+  "name": "notscape",
+  "version": "0.5.0",
+  "description": "A browser that makes every website look like the old internet.",
+  "main": "main.js",
+  "author": {
+    "name": "Matt Stohrer",
+    "email": "stohrermusic@gmail.com"
+  },
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check main.js && node --check preload.js && node --check src/renderer.js && node --check src/splash.js && node --check src/home.js && node --check src/inject/engine.js && node --check src/inject/styles.js",
+    "icon": "node scripts/make-icon.js",
+    "pack": "electron-builder --dir",
+    "dist:linux": "electron-builder --linux AppImage",
+    "dist:mac": "electron-builder --mac dmg",
+    "installer": "node scripts/make-icon.js && electron-builder --dir && iscc installer\\notscape.iss"
+  },
+  "build": {
+    "appId": "com.stohrermusic.notscape",
+    "productName": "Notscape",
+    "copyright": "Copyright (c) 2026 Matt Stohrer",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "assets/README.md",
+      "package.json"
+    ],
+    "win": {
+      "target": "dir",
+      "icon": "build/icon.ico"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Network",
+      "icon": "build/icon.png"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.utilities"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}

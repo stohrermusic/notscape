@@ -1,0 +1,130 @@
+/* Windows 95 / dial-up dialog look */
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #008080; /* teal desktop */
+  font-family: 'Tahoma', 'MS Sans Serif', Geneva, sans-serif;
+  font-size: 12px;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+  overflow: hidden;
+}
+
+.dialog {
+  position: absolute;
+  inset: 8px;
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #ffffff #000000 #000000 #ffffff;
+  box-shadow: inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080;
+  display: flex;
+  flex-direction: column;
+}
+
+.titlebar {
+  height: 20px;
+  margin: 2px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(90deg, #000080, #1084d0);
+  color: #fff;
+  font-weight: bold;
+  -webkit-app-region: drag;
+}
+.titlebar .x {
+  -webkit-app-region: no-drag;
+  width: 16px; height: 16px; line-height: 13px; text-align: center;
+  background: #c0c0c0; color: #000;
+  border: 1px solid;
+  border-color: #ffffff #000 #000 #ffffff;
+  font-weight: bold;
+}
+
+.body { flex: 1; padding: 12px; }
+
+.brand { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.brandtext span { color: #000080; }
+
+/* the classic blue triangle */
+.triangle {
+  width: 0; height: 0;
+  border-left: 18px solid transparent;
+  border-right: 18px solid transparent;
+  border-bottom: 30px solid #1084d0;
+  filter: drop-shadow(1px 1px 0 #000080);
+}
+.triangle.spin { animation: tri 1.2s linear infinite; }
+@keyframes tri {
+  0%   { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(0.7); border-bottom-color: #38b0ff; }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+.field { display: flex; align-items: center; margin: 6px 0; }
+.field label { width: 110px; }
+.field select, .field input[type=password] {
+  flex: 1;
+  border: 2px solid;
+  border-color: #808080 #fff #fff #808080;
+  background: #fff;
+  font-family: inherit;
+  padding: 2px;
+}
+.field.checks { display: block; }
+.field.checks label { width: auto; display: block; margin: 2px 0; }
+
+.actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+
+button {
+  min-width: 72px;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #ffffff #000000 #000000 #ffffff;
+  box-shadow: inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080;
+}
+button:active {
+  border-color: #000000 #ffffff #ffffff #000000;
+  box-shadow: inset 1px 1px 0 #808080;
+}
+button.primary { font-weight: bold; }
+
+#status {
+  margin: 4px 0 10px;
+  padding: 3px 4px;
+  background: #fff;
+  border: 2px solid;
+  border-color: #808080 #fff #fff #808080;
+}
+
+.meter {
+  height: 18px;
+  background: #fff;
+  border: 2px solid;
+  border-color: #808080 #fff #fff #808080;
+  padding: 2px;
+}
+#bar {
+  height: 100%;
+  width: 0%;
+  background: repeating-linear-gradient(90deg, #000080 0 10px, #1084d0 10px 14px);
+  transition: width 0.25s linear;
+}
+
+#steps {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: #808080;
+  font-size: 11px;
+  line-height: 1.5;
+}
+#steps li.active { color: #000; font-weight: bold; }
+#steps li.done { color: #008000; }
+#steps li.done::marker { content: '✓ '; }

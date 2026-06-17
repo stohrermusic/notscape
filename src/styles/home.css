@@ -1,0 +1,94 @@
+/* Notscape RSS start page — the "welcome screen" */
+#home-screen {
+  position: absolute; inset: 0; z-index: 10;
+  overflow: auto;
+  background: #008080;
+  background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.03) 0 10px, transparent 10px 20px);
+  font-family: 'Times New Roman', Times, serif;
+  color: #000;
+}
+#home-screen[hidden] { display: none; }
+
+.hs-page {
+  max-width: 820px; margin: 0 auto; background: #c0c0c0;
+  border: 2px solid; border-color: #fff #404040 #404040 #fff;
+}
+
+.hs-masthead {
+  background: linear-gradient(180deg, #000080, #1084d0);
+  color: #fff; text-align: center; padding: 12px; border-bottom: 3px ridge #88f;
+}
+.hs-masthead h1 {
+  margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 40px;
+  font-style: italic; letter-spacing: 1px; text-shadow: 2px 2px 0 #000040;
+}
+.hs-tag { font-family: 'Courier New', monospace; font-size: 12px; color: #aef; }
+
+.hs-welcome {
+  background: #000; color: #00ff66; font-family: 'Courier New', monospace;
+  padding: 4px; border-bottom: 2px solid #00ff66;
+}
+.hs-welcome span { color: #ffff66; }
+
+.hs-searchbar {
+  text-align: center; padding: 10px; background: #d4d0c8; border-bottom: 2px groove #fff;
+}
+.hs-searchbar input[type=text] {
+  width: 50%; padding: 4px; font-size: 13px; border: 2px inset #c0c0c0; font-family: inherit;
+}
+.hs-searchbar button {
+  padding: 4px 12px; font-family: inherit; border: 2px outset #c0c0c0; background: #c0c0c0; font-weight: bold;
+}
+
+.hs-cols { display: flex; align-items: flex-start; }
+.hs-col-main { flex: 1.7; padding: 10px 12px; min-width: 0; }
+.hs-col-side { flex: 1; padding: 10px 12px; border-left: 2px groove #fff; }
+
+.hs-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #000080; color: #fff; padding: 3px 8px; margin: 0 0 8px;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif; font-weight: bold; font-size: 13px;
+}
+.hs-controls { display: flex; align-items: center; gap: 8px; font-weight: normal; font-size: 11px; }
+.hs-controls select, .hs-controls button { font-family: inherit; font-size: 11px; }
+
+/* feed items */
+.hs-item { padding: 6px 4px; border-bottom: 1px dotted #808080; }
+.hs-item a.hs-title { font-size: 14px; font-weight: bold; color: #0000ee; text-decoration: underline; }
+.hs-item a.hs-title:visited { color: #551a8b; }
+.hs-item .hs-meta { font-size: 11px; color: #404040; font-family: 'MS Sans Serif', Tahoma, sans-serif; }
+.hs-item .hs-src { color: #000080; font-weight: bold; }
+.hs-item .hs-desc { font-size: 12px; color: #222; margin-top: 2px; }
+.hs-empty, .hs-err { padding: 10px; font-style: italic; color: #404040; }
+.hs-err { color: #aa0000; }
+
+#hs-pager {
+  display: flex; align-items: center; gap: 10px; justify-content: center;
+  padding: 8px; margin-top: 6px; border-top: 2px groove #fff;
+}
+#hs-pager button { font-family: inherit; padding: 3px 10px; border: 2px outset #c0c0c0; background: #c0c0c0; }
+#hs-pager button:disabled { color: #808080; }
+
+/* manage feeds */
+.hs-add { display: flex; gap: 4px; margin-bottom: 8px; }
+.hs-add input { flex: 1; min-width: 0; padding: 3px; border: 2px inset #c0c0c0; font-family: inherit; }
+.hs-add button { padding: 3px 8px; border: 2px outset #c0c0c0; background: #c0c0c0; font-family: inherit; }
+#hs-feedlist { list-style: none; margin: 0 0 12px; padding: 0; }
+#hs-feedlist li {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 3px 4px; border-bottom: 1px dotted #808080; font-size: 12px;
+}
+#hs-feedlist .hs-warn { color: #cc6600; cursor: default; }
+#hs-feedlist .hs-del { color: #aa0000; font-weight: bold; cursor: default; padding: 0 4px; }
+#hs-feedlist .hs-del:hover { background: #aa0000; color: #fff; }
+.hs-today { font-size: 12px; }
+
+.hs-webring {
+  background: #000080; color: #fff; text-align: center; padding: 8px;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif; font-size: 12px;
+}
+.hs-webring a { color: #ffff00; }
+.hs-footer {
+  background: #000; color: #00ff66; text-align: center; padding: 10px;
+  font-family: 'Courier New', monospace; font-size: 12px; border-top: 2px solid #00ff66;
+}

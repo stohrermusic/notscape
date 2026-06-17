@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Notscape</title>
+  <link rel="stylesheet" href="styles/chrome.css" />
+  <link rel="stylesheet" href="styles/home.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- TITLE BAR -->
+    <div id="titlebar">
+      <div class="tb-left">
+        <span class="tb-logo">N</span>
+        <span id="win-title">Notscape</span>
+      </div>
+      <div class="tb-buttons">
+        <button id="min" title="Minimize">_</button>
+        <button id="max" title="Maximize">▢</button>
+        <button id="close" title="Close">×</button>
+      </div>
+    </div>
+
+    <!-- MENU BAR -->
+    <div id="menubar">
+      <span class="menu-item" data-menu="file">File</span>
+      <span class="menu-item" data-menu="edit">Edit</span>
+      <span class="menu-item" data-menu="view">View</span>
+      <span class="menu-item" id="go-menu">Go</span>
+      <span class="menu-item" id="bookmarks-menu">Bookmarks</span>
+      <span class="menu-item" id="mods-menu-btn">Mods</span>
+      <span class="menu-item" data-menu="help">Help</span>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div id="toolbar">
+      <button id="back" class="tbtn"><b>&laquo;</b> Back</button>
+      <button id="forward" class="tbtn">Forward <b>&raquo;</b></button>
+      <button id="reload" class="tbtn">Reload</button>
+      <button id="stop" class="tbtn">Stop</button>
+      <button id="home" class="tbtn">Home</button>
+      <button id="mods" class="tbtn star">★ Mods</button>
+      <div class="spacer"></div>
+      <div id="throbber" title="Notscape">
+        <div class="sky"></div>
+        <span class="n">N</span>
+        <i class="star s1"></i><i class="star s2"></i><i class="star s3"></i>
+      </div>
+    </div>
+
+    <!-- LOCATION BAR -->
+    <div id="locationbar">
+      <span class="loc-label">Location:</span>
+      <input id="urlbar" type="text" spellcheck="false"
+             placeholder="Type a URL or search the old web..." />
+      <button id="go" class="tbtn">Go</button>
+    </div>
+
+    <!-- BOOKMARKS BAR -->
+    <div id="bookmarksbar"></div>
+
+    <!-- CONTENT -->
+    <div id="content">
+      <webview id="view" src="about:blank" allowpopups></webview>
+
+      <!-- RSS START PAGE (the "welcome screen") -->
+      <div id="home-screen">
+        <div class="hs-page">
+          <div class="hs-masthead">
+            <h1>Notscape</h1>
+            <div class="hs-tag">N&nbsp;E&nbsp;T&nbsp;C&nbsp;E&nbsp;N&nbsp;T&nbsp;E&nbsp;R &nbsp;&middot;&nbsp; your personal channels on The Old Internet</div>
+          </div>
+
+          <marquee class="hs-welcome" scrollamount="6">
+            ★ Welcome back, <span id="hs-name">saxman103</span>! ★ The Old Internet lives! ★ Add your own RSS channels &rarr; ★ 56k and proud ★
+          </marquee>
+
+          <div class="hs-searchbar">
+            <form id="hs-search">
+              <b>Search the Web:</b>
+              <input type="text" id="hs-q" placeholder="dancing baby gif" autocomplete="off" />
+              <button type="submit">Search!</button>
+            </form>
+          </div>
+
+          <div class="hs-cols">
+            <!-- CHANNELS -->
+            <div class="hs-col-main">
+              <div class="hs-bar">
+                <span>📡 My Channels</span>
+                <span class="hs-controls">
+                  <label>View:
+                    <select id="hs-view">
+                      <option value="recent">Most recent</option>
+                      <option value="paged">Paginated</option>
+                    </select>
+                  </label>
+                  <button id="hs-refresh" title="Reload feeds">↻ Refresh</button>
+                </span>
+              </div>
+              <div id="hs-items"><p class="hs-empty">Loading your channels&hellip;</p></div>
+              <div id="hs-pager" hidden>
+                <button id="hs-prev">&laquo; Prev</button>
+                <span id="hs-pageinfo">Page 1</span>
+                <button id="hs-next">Next &raquo;</button>
+              </div>
+            </div>
+
+            <!-- MANAGE -->
+            <div class="hs-col-side">
+              <div class="hs-bar">➕ Manage Channels</div>
+              <form id="hs-addform" class="hs-add">
+                <input type="text" id="hs-addurl" placeholder="https://example.com/rss" autocomplete="off" />
+                <button type="submit">Add</button>
+              </form>
+              <ul id="hs-feedlist"></ul>
+              <div class="hs-bar">🌦️ Today</div>
+              <p class="hs-today">
+                <b>Date:</b> <span id="hs-clock">&hellip;</span><br />
+                <b>Connection:</b> 56,600 bps<br />
+                <b>Channels:</b> <span id="hs-count">0</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="hs-webring">
+            This page is part of the <b>Old Web Webring</b> &nbsp;
+            [ <a href="#">&laquo; Prev</a> | <a href="#">Random</a> | <a href="#">Next &raquo;</a> ]
+          </div>
+          <div class="hs-footer">🚧 Best viewed in Notscape Navigator at 800&times;600 &middot; populate it with your own RSS feeds! 🚧</div>
+        </div>
+      </div>
+
+      <!-- opaque cover so the modern site never flashes before the retro styling lands -->
+      <div id="load-cover" hidden>
+        <div class="lc-panel">
+          <div class="lc-row">
+            <div class="lc-globe">N</div>
+            <div class="lc-text">Contacting host&hellip;</div>
+          </div>
+          <div class="lc-bar"><div class="lc-fill"></div></div>
+          <div class="lc-sub">Transferring data at 56,600 bps</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATUS BAR -->
+    <div id="statusbar">
+      <span id="status-text">Done</span>
+      <div class="status-right">
+        <div id="status-meter"><div id="status-bar-fill"></div></div>
+        <span id="padlock" title="Secure-ish">🔒</span>
+        <span id="zone">Old Internet Zone</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODS PANEL -->
+  <div id="mods-overlay" hidden>
+    <div id="mods-panel">
+      <div class="mp-title">
+        <span>Settings</span>
+        <button id="mods-close">×</button>
+      </div>
+
+      <div class="mp-body">
+        <fieldset>
+          <legend>Presets</legend>
+          <div class="presets">
+            <button data-preset="modern">Modern (off)</button>
+            <button data-preset="reskin">Reskin</button>
+            <button data-preset="geocities">GeoCities!!!</button>
+            <button data-preset="mosaic">Mosaic</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Sliders</legend>
+          <label class="slider">
+            <span>GeoCities-ify <b id="v-geoCities">0</b>% &mdash; how hard to hit the cookie-cutter sites</span>
+            <input type="range" id="geoCities" min="0" max="100" value="0" />
+          </label>
+          <p class="mp-hint">Drag right to drown any same-y modern site (Squarespace, Wix, every
+            startup landing page) in tables, marquees, hit counters and Comic Sans &mdash; staged by amount.</p>
+          <label class="slider">
+            <span>Vintage <b id="v-age">70</b>%</span>
+            <input type="range" id="age" min="0" max="100" value="70" />
+          </label>
+          <label class="slider">
+            <span>Image pixelation <b id="v-pixelation">0</b></span>
+            <input type="range" id="pixelation" min="0" max="8" value="0" />
+          </label>
+          <label class="slider">
+            <span>Color depth <b id="v-colorDepth">256</b> colors</span>
+            <input type="range" id="colorDepth" min="0" max="3" value="1" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Style</legend>
+          <label><input type="checkbox" id="oldFonts" /> Old fonts (Times / Courier, no smoothing)</label>
+          <label><input type="checkbox" id="flatten" /> Flatten corners &amp; kill shadows/gradients</label>
+          <label><input type="checkbox" id="beveled" /> Beveled 3D boxes &amp; buttons</label>
+          <label><input type="checkbox" id="retroLinks" /> Blue/purple underlined links</label>
+          <label><input type="checkbox" id="grayBg" /> Gray (#c0c0c0) background</label>
+          <label><input type="checkbox" id="tiledBg" /> Tiled wallpaper background (keeps text readable)</label>
+          <label><input type="checkbox" id="comicSans" /> Comic Sans EVERYTHING</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Behavior</legend>
+          <label><input type="checkbox" id="killSticky" /> Un-stick fixed/sticky headers</label>
+          <label><input type="checkbox" id="marquee" /> Marquee the headings</label>
+          <label><input type="checkbox" id="blink" /> &lt;blink&gt; emphasis text</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>GeoCities Garnish</legend>
+          <label><input type="checkbox" id="construction" /> "Under Construction" + "Best viewed in Notscape"</label>
+          <label><input type="checkbox" id="hitCounter" /> Fake visitor hit counter</label>
+          <label><input type="checkbox" id="webring" /> Webring footer</label>
+          <label><input type="checkbox" id="dither" /> Retro images (pixelate / dither)</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Sounds</legend>
+          <label><input type="checkbox" id="soundWelcome" /> Play "Welcome!" when you sign on</label>
+          <label><input type="checkbox" id="soundMail" /> Play "You've got mail!" when you open Gmail</label>
+          <p class="mp-hint">Drop <code>welcome.wav</code> / <code>youve-got-mail.wav</code> in the
+            <code>assets/</code> folder for the real clips; otherwise a text-to-speech voice fills in.</p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Network &amp; Ads</legend>
+          <label><input type="checkbox" id="blockAds" /> Block ads &amp; trackers (recommended)</label>
+          <label><input type="checkbox" id="spoofUA" /> Pretend to be Netscape 4 (reloads page)</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Privacy &amp; Safety</legend>
+          <label><input type="checkbox" id="safeMode" /> Safe Mode &mdash; keep sites' security headers
+            (CSP / X-Frame). Safer for logins, but some skins won't apply. <i>Reloads.</i></label>
+          <p class="mp-hint">Notscape does <b>not</b> store passwords, and the sign-on dialog is fake.
+            It does keep cookies like any browser. For sensitive logins (banking, email) prefer your
+            normal browser, or turn on Safe Mode above first.</p>
+          <div class="presets" style="margin-top:6px">
+            <button id="clearData">Clear cookies, cache &amp; history</button>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+  </div>
+
+  <script src="inject/engine.js"></script>
+  <script src="inject/styles.js"></script>
+  <script src="home.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Sign On</title>
+  <link rel="stylesheet" href="styles/splash.css" />
+</head>
+<body>
+  <div class="dialog">
+    <div class="titlebar">
+      <span class="title">Notscape Dial-Up Networking</span>
+      <span class="x">×</span>
+    </div>
+
+    <div class="body">
+      <!-- SIGN-ON CARD -->
+      <div id="signon">
+        <div class="brand">
+          <div class="triangle"></div>
+          <div class="brandtext">
+            <b>Notscape&nbsp;Online</b><br />
+            <span>Connect to The Old Internet</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Screen Name:</label>
+          <input id="screenName" list="names" type="text" spellcheck="false"
+                 autocomplete="off" maxlength="24" placeholder="Choose a screen name" />
+          <datalist id="names">
+            <option>saxman103</option>
+            <option>GuestUser1996</option>
+            <option>xX_websurfer_Xx</option>
+            <option>CoolDude2001</option>
+            <option>Sk8rBoi42</option>
+            <option>NetscapeNavigator</option>
+          </datalist>
+        </div>
+        <div class="field">
+          <label>Password:</label>
+          <input type="password" value="hunter2" readonly />
+        </div>
+        <div class="field checks">
+          <label><input type="checkbox" checked /> Store password</label>
+          <label><input type="checkbox" /> Sign on as a guest</label>
+        </div>
+
+        <div class="actions">
+          <button id="signonBtn" class="primary">Sign&nbsp;On</button>
+          <button id="signonCancelBtn">Cancel</button>
+        </div>
+      </div>
+
+      <!-- CONNECTING CARD -->
+      <div id="connecting" hidden>
+        <div class="brand">
+          <div class="triangle spin"></div>
+          <div class="brandtext">
+            <b>Connecting&hellip;</b><br />
+            <span id="bps">56,600 bps</span>
+          </div>
+        </div>
+
+        <div id="status">Preparing to dial&hellip;</div>
+
+        <div class="meter"><div id="bar"></div></div>
+
+        <ol id="steps">
+          <li data-step="0">Dialing 1&#8209;800&#8209;OLD&#8209;WEB&hellip;</li>
+          <li data-step="1">Initializing modem (ATDT)&hellip;</li>
+          <li data-step="2">Verifying screen name &amp; password&hellip;</li>
+          <li data-step="3">Establishing carrier at 56,600 bps&hellip;</li>
+          <li data-step="4">Checking for new mail (you have 0)&hellip;</li>
+          <li data-step="5">Loading the World Wide Web&hellip;</li>
+        </ol>
+
+        <div class="actions">
+          <button id="cancelBtn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="splash.js"></script>
+</body>
+</html>

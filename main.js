@@ -54,6 +54,32 @@ function isAdHost(url) {
   return AD_HOSTS.some((d) => host === d || host.endsWith('.' + d));
 }
 
+// "No social media" — block navigation to these (default on)
+let blockSocial = true;
+const SOCIAL_HOSTS = [
+  'facebook.com', 'fb.com', 'instagram.com', 'twitter.com', 'x.com', 'tiktok.com',
+  'threads.net', 'snapchat.com', 'linkedin.com', 'pinterest.com', 'tumblr.com'
+];
+function isSocialHost(url) {
+  let host;
+  try { host = new URL(url).hostname.toLowerCase(); } catch (_) { return false; }
+  return SOCIAL_HOSTS.some((d) => host === d || host.endsWith('.' + d));
+}
+function socialBlockPage(host) {
+  const safe = String(host).replace(/[<>&]/g, '');
+  const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>404 Not Found</title></head>' +
+    '<body style="background:#fff;color:#000;font-family:\'Times New Roman\',Times,serif;padding:28px 34px">' +
+    '<h1 style="font-size:30px;margin:0 0 10px">Not Found</h1>' +
+    '<p style="font-size:15px">The requested URL was not found on this server.</p>' +
+    '<hr style="border:0;border-top:1px solid #000;margin:14px 0">' +
+    '<p style="font-size:13px">Notscape Server at <b>' + safe + '</b> Port 80</p>' +
+    '<br><br><br>' +
+    '<p style="color:#808080;font-size:12px;font-style:italic">This site hasn\'t been invented yet. ' +
+    'Check back in a few years &mdash; or switch off &ldquo;No social media&rdquo; in Edit &rarr; Preferences.</p>' +
+    '</body></html>';
+  return 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+}
+
 // Auth / sign-in hosts treated as hands-off: we never strip their security
 // headers (and the renderer never injects into them), so entering a password
 // stays as safe as in a normal browser. The inbox itself (mail.google.com) is
@@ -124,7 +150,7 @@ function createSplash() {
 }
 
 function createMain() {
-  mainWindow = new BrowserWindow({
+  const win = new BrowserWindow({
     width: 1040,
     height: 740,
     minWidth: 700,
@@ -141,13 +167,13 @@ function createMain() {
     }
   });
 
-  mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
-  mainWindow.once('ready-to-show', () => mainWindow.show());
-  mainWindow.on('closed', () => { mainWindow = null; });
-  mainWindow.on('maximize', () =>
-    mainWindow.webContents.send('window-state', { maximized: true }));
-  mainWindow.on('unmaximize', () =>
-    mainWindow.webContents.send('window-state', { maximized: false }));
+  win.loadFile(path.join(__dirname, 'src', 'index.html'));
+  win.once('ready-to-show', () => win.show());
+  win.on('maximize', () => win.webContents.send('window-state', { maximized: true }));
+  win.on('unmaximize', () => win.webContents.send('window-state', { maximized: false }));
+  win.on('closed', () => { if (mainWindow === win) mainWindow = null; });
+  mainWindow = win; // most-recent window is the default target
+  return win;
 }
 
 // Block ad/tracker requests, and (unless Safe Mode is on) strip headers that
@@ -186,8 +212,23 @@ function setupNetwork() {
 app.on('web-contents-created', (event, contents) => {
   if (contents.getType() === 'webview') {
     contents.setWindowOpenHandler(({ url }) => {
-      if (mainWindow) mainWindow.webContents.send('open-url', url);
+      if (blockSocial && isSocialHost(url)) {
+        let h = ''; try { h = new URL(url).hostname; } catch (_) {}
+        contents.loadURL(socialBlockPage(h));
+        return { action: 'deny' };
+      }
+      const host = contents.hostWebContents; // the window that owns this webview
+      if (host && !host.isDestroyed()) host.send('open-url', url);
+      else if (mainWindow) mainWindow.webContents.send('open-url', url);
       return { action: 'deny' };
+    });
+    // No-social-media: redirect any navigation to a social host to a block page
+    contents.on('will-navigate', (e, url) => {
+      if (blockSocial && isSocialHost(url)) {
+        e.preventDefault();
+        let h = ''; try { h = new URL(url).hostname; } catch (_) {}
+        contents.loadURL(socialBlockPage(h));
+      }
     });
   }
 });
@@ -207,6 +248,8 @@ ipcMain.on('splash-connected', () => {
   createMain();
   if (splashWindow) splashWindow.close();
 });
+
+ipcMain.on('window:new', () => createMain());
 
 ipcMain.handle('bookmarks:get', () => readJson('bookmarks.json', DEFAULT_BOOKMARKS));
 ipcMain.handle('bookmarks:set', (_e, data) => writeJson('bookmarks.json', data));
@@ -269,6 +312,7 @@ ipcMain.handle('rss:fetch', async (_e, url) => {
 
 ipcMain.on('net:safe-mode', (_e, on) => { stripHeaders = !on; });
 ipcMain.on('net:block-ads', (_e, on) => { blockAds = !!on; });
+ipcMain.on('net:block-social', (_e, on) => { blockSocial = !!on; });
 ipcMain.handle('privacy:clear', async () => {
   try {
     await session.defaultSession.clearStorageData();
@@ -287,6 +331,7 @@ app.whenReady().then(() => {
   if (cfg) {
     if (cfg.safeMode) stripHeaders = false;
     if (cfg.blockAds === false) blockAds = false;
+    if (cfg.blockSocial === false) blockSocial = false;
   }
   setupNetwork();
   createSplash();

@@ -23,6 +23,27 @@ function isAuthHost(host) {
     .some((d) => host === d || host.endsWith('.' + d));
 }
 
+// "No social media" — these return a period-accurate 404 (they didn't exist yet)
+const SOCIAL_HOSTS = ['facebook.com', 'fb.com', 'instagram.com', 'twitter.com', 'x.com',
+  'tiktok.com', 'threads.net', 'snapchat.com', 'linkedin.com', 'pinterest.com', 'tumblr.com'];
+function isSocialHost(host) {
+  if (!host) return false;
+  return SOCIAL_HOSTS.some((d) => host === d || host.endsWith('.' + d));
+}
+function social404(host) {
+  const safe = String(host).replace(/[<>&]/g, '');
+  const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>404 Not Found</title></head>' +
+    '<body style="background:#fff;color:#000;font-family:\'Times New Roman\',Times,serif;padding:28px 34px">' +
+    '<h1 style="font-size:30px;margin:0 0 10px">Not Found</h1>' +
+    '<p style="font-size:15px">The requested URL was not found on this server.</p>' +
+    '<hr style="border:0;border-top:1px solid #000;margin:14px 0">' +
+    '<p style="font-size:13px">Notscape Server at <b>' + safe + '</b> Port 80</p>' +
+    '<br><br><br><p style="color:#808080;font-size:12px;font-style:italic">This site hasn\'t been invented yet. ' +
+    'Check back in a few years &mdash; or switch off &ldquo;No social media&rdquo; in Edit &rarr; Preferences.</p>' +
+    '</body></html>';
+  return 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+}
+
 // ---------------------------------------------------------------------------
 // Config (the Mods). Transform is ON by default -> you land in the old web.
 // ---------------------------------------------------------------------------
@@ -55,8 +76,13 @@ const DEFAULT_CONFIG = {
   // sounds
   soundWelcome: true,
   soundMail: true,
+  chiptune: false,
+  uiSounds: false,
+  statusScroller: false,
   // network / privacy
   blockAds: true,
+  blockSocial: true,
+  hideComments: true,
   allowAutoplay: false,
   safeMode: false,
   spoofUA: false,
@@ -108,6 +134,7 @@ function showHome() {
   urlbar.value = '';
   winTitle.textContent = 'Notscape';
   if (window.NotscapeHome) window.NotscapeHome.onShow();
+  applyExtras();
   updateNavButtons();
 }
 function hideHome() {
@@ -117,9 +144,11 @@ function hideHome() {
 
 function navigate(input) {
   const loc = toLocation(input);
+  uiClick();
   if (loc === HOME) { showHome(); return; }
   currentURL = loc;
   hideHome();
+  applyExtras();
   view.loadURL(loc);
 }
 // let the start page open links/searches in the webview
@@ -132,11 +161,21 @@ async function applyTransform() {
   // never re-skin our own home page
   if (isHome(currentURL)) { await clearCSS(); return; }
 
+  // our own data: pages (404 / error pages) — leave them alone
+  if (/^data:/.test(currentURL)) { await clearCSS(); return; }
+
   // never touch a sign-in page — keep it pristine & as safe as a normal browser
   if (isAuthHost(hostOf(currentURL))) {
     await clearCSS();
     try { await view.executeJavaScript('window.__NOTSCAPE__&&window.__NOTSCAPE__.reset()'); } catch (_) {}
     statusText.textContent = '🔒 Secure sign-in page — Notscape is hands-off here.';
+    return;
+  }
+
+  // per-site "old web off here" override (View menu)
+  if (isSiteDisabled(hostOf(currentURL))) {
+    await clearCSS();
+    try { await view.executeJavaScript('window.__NOTSCAPE__&&window.__NOTSCAPE__.reset()'); } catch (_) {}
     return;
   }
 
@@ -147,8 +186,11 @@ async function applyTransform() {
   }
   const fkeys = siteFlourishes[host] || [];
   const fset = new Set(fkeys);
-  // flourishes apply even when the master transform is off
-  const active = config.enabled || fkeys.length > 0;
+  const onRing = isRingMember(host);
+  const webringOn = config.webring || fset.has('webring') || onRing;
+  const webringData = webringOn ? computeWebringData(host) : null;
+  // flourishes / ring footer apply even when the master transform is off
+  const active = config.enabled || fkeys.length > 0 || onRing;
 
   // 1) CSS layer (CSP-proof via insertCSS)
   await clearCSS();
@@ -173,7 +215,8 @@ async function applyTransform() {
             marquee: config.marquee || fset.has('scroll'),
             construction: config.construction || fset.has('construction'),
             hitCounter: config.hitCounter || fset.has('counter'),
-            webring: config.webring || fset.has('webring'),
+            webring: webringOn,
+            webringData: webringData,
             guestbook: fset.has('guestbook'),
             bestviewed: fset.has('bestviewed'),
             awards: fset.has('awards'),
@@ -184,7 +227,8 @@ async function applyTransform() {
             marquee: fset.has('scroll'),
             construction: fset.has('construction'),
             hitCounter: fset.has('counter'),
-            webring: fset.has('webring'),
+            webring: webringOn,
+            webringData: webringData,
             guestbook: fset.has('guestbook'),
             bestviewed: fset.has('bestviewed'),
             awards: fset.has('awards'),
@@ -215,11 +259,22 @@ const AD_COSMETIC_CSS = [
   '[aria-label="Advertisement" i]', '[aria-label="Ad" i]'
 ].join(',') + '{display:none!important}';
 
-async function applyAdCosmetics() {
+// Hide comment sections (YouTube, Disqus, WordPress, Facebook plugins, etc.)
+const COMMENT_CSS = [
+  'ytd-comments', '#comments', '#comment-section', '#comment-area',
+  '#disqus_thread', 'iframe[src*="disqus.com"]',
+  '.fb-comments', 'iframe[src*="facebook.com/plugins/comments"]',
+  '.comments-area', '.comment-list', '#respond', '#commentform', '#comment-form',
+  '[class*="comments-section"]', '[class*="comment-section"]', 'section[aria-label*="omment" i]'
+].join(',') + '{display:none!important}';
+
+async function applyPageCosmetics() {
   if (adCssKey) { try { await view.removeInsertedCSS(adCssKey); } catch (_) {} adCssKey = null; }
-  if (config.blockAds && !isHome(currentURL) && !isAuthHost(hostOf(currentURL))) {
-    try { adCssKey = await view.insertCSS(AD_COSMETIC_CSS); } catch (_) {}
-  }
+  if (isHome(currentURL) || isAuthHost(hostOf(currentURL))) return;
+  let css = '';
+  if (config.blockAds) css += AD_COSMETIC_CSS + '\n';
+  if (config.hideComments) css += COMMENT_CSS + '\n';
+  if (css) { try { adCssKey = await view.insertCSS(css); } catch (_) {} }
 }
 
 // Block media autoplay until the user interacts (unless they allow it)
@@ -240,7 +295,7 @@ async function applyAutoplay() {
 }
 
 async function applyPagePolicies() {
-  await applyAdCosmetics();
+  await applyPageCosmetics();
   await applyAutoplay();
 }
 
@@ -319,15 +374,26 @@ view.addEventListener('did-start-loading', () => setLoading(true));
 view.addEventListener('did-stop-loading', () => { setLoading(false); updateNavButtons(); hideCover(); });
 view.addEventListener('did-start-navigation', (e) => {
   if (!e.isMainFrame) return;
+  // No social media: any navigation to a social host becomes a period 404
+  if (config.blockSocial && !/^data:/.test(e.url) && isSocialHost(hostOf(e.url))) {
+    view.stop();
+    urlbar.value = e.url;
+    hideHome();
+    currentURL = social404(hostOf(e.url));
+    view.loadURL(currentURL);
+    return;
+  }
   engineInjected = false;
   if (config.enabled && !isHome(e.url) && !/^data:/.test(e.url)) showCover(e.url);
   else hideCover();
 });
 
 view.addEventListener('did-navigate', (e) => {
-  if (e.url === 'about:blank') return; // initial blank webview behind the start page
+  if (e.url === 'about:blank' || /^data:/.test(e.url)) return; // blank/data pages: leave address bar as-is
   currentURL = e.url;
   urlbar.value = isHome(e.url) ? '' : e.url;
+  const ri = ringIndexOf(hostOf(e.url));
+  if (ri >= 0) { webringIndex = ri; try { localStorage.setItem('ns-webring-idx', String(ri)); } catch (_) {} }
   bumpProgress();
 });
 view.addEventListener('did-navigate-in-page', (e) => {
@@ -365,6 +431,7 @@ view.addEventListener('did-fail-load', (e) => {
   if (e.errorCode === -3 || !e.isMainFrame) return; // -3 = aborted
   setLoading(false);
   hideCover();
+  uiDing();
   const html = errorPage(e.validatedURL || currentURL, e.errorDescription);
   view.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
 });
@@ -454,6 +521,8 @@ function doEdit(cmd) {
 }
 const MENUS = {
   file: () => [
+    { label: 'Webring…', action: openWebring },
+    { label: 'New Window', action: () => window.notscape.newWindow() },
     { label: 'Start Page', action: () => navigate('home') },
     { label: 'Reload', action: () => (currentURL === HOME ? window.NotscapeHome.reload() : view.reload()) },
     { label: 'Stop', action: () => view.stop() },
@@ -468,6 +537,8 @@ const MENUS = {
     { label: 'Paste', action: () => doEdit('paste') },
     { label: 'Select All', action: () => doEdit('selectAll') },
     { sep: true },
+    { label: 'Find on Page…', action: openFind },
+    { sep: true },
     { label: 'Preferences…', action: openPrefs }
   ],
   view: () => [
@@ -476,6 +547,11 @@ const MENUS = {
     { label: 'Reload', action: () => view.reload() },
     { sep: true },
     { label: (config.enabled ? '✓ ' : ' ') + 'Old Internet', action: toggleMaster },
+    { label: (isSiteDisabled(hostOf(currentURL)) ? '   ' : '✓ ') + 'Old web on this site', action: toggleSiteDisabled, disabled: isHome(currentURL) },
+    { sep: true },
+    { label: 'Zoom In', action: () => zoomBy(0.5) },
+    { label: 'Zoom Out', action: () => zoomBy(-0.5) },
+    { label: 'Reset Zoom', action: () => setZoom(0) },
     { sep: true },
     { label: 'Mods…', action: openMods },
     { label: 'Flourishes…', action: openFlourishes },
@@ -485,7 +561,9 @@ const MENUS = {
   go: () => [
     { label: 'Back', action: () => { if (view.canGoBack()) { hideHome(); view.goBack(); } }, disabled: !view.canGoBack() },
     { label: 'Forward', action: () => { if (view.canGoForward()) { hideHome(); view.goForward(); } }, disabled: !view.canGoForward() },
-    { label: 'Start Page', action: () => navigate('home') }
+    { label: 'Start Page', action: () => navigate('home') },
+    { sep: true },
+    { label: 'History…', action: openHistory }
   ],
   bookmarks: () => {
     const items = [
@@ -542,6 +620,226 @@ document.querySelectorAll('#menubar .menu-item[data-menu]').forEach((mi) => {
   });
 });
 document.addEventListener('click', () => { if (openMenuKey) closeMenus(); });
+
+// ---------------------------------------------------------------------------
+// Per-site "old web off here" (remembered in localStorage)
+// ---------------------------------------------------------------------------
+let siteDisabled = (function () {
+  try { return new Set(JSON.parse(localStorage.getItem('ns-disabled') || '[]')); } catch (_) { return new Set(); }
+})();
+function isSiteDisabled(host) { return !!host && siteDisabled.has(host); }
+function toggleSiteDisabled() {
+  const host = hostOf(currentURL);
+  if (!host || isHome(currentURL)) return;
+  if (siteDisabled.has(host)) siteDisabled.delete(host); else siteDisabled.add(host);
+  try { localStorage.setItem('ns-disabled', JSON.stringify(Array.from(siteDisabled))); } catch (_) {}
+  view.reload();
+}
+
+// ---------------------------------------------------------------------------
+// Zoom
+// ---------------------------------------------------------------------------
+let zoomLevel = 0;
+function setZoom(level) {
+  zoomLevel = Math.max(-3, Math.min(5, level));
+  try { view.setZoomLevel(zoomLevel); } catch (_) {}
+  statusText.textContent = 'Zoom: ' + Math.round(100 * Math.pow(1.2, zoomLevel)) + '%';
+}
+function zoomBy(d) { setZoom(zoomLevel + d); }
+
+// ---------------------------------------------------------------------------
+// Find in page (Ctrl+F)
+// ---------------------------------------------------------------------------
+function openFind() {
+  if (isHome(currentURL)) return;
+  const fb = document.getElementById('findbar');
+  fb.hidden = false;
+  const inp = document.getElementById('findbar-input');
+  inp.focus(); inp.select();
+}
+function closeFind() {
+  document.getElementById('findbar').hidden = true;
+  document.getElementById('findbar-count').textContent = '';
+  try { view.stopFindInPage('clearSelection'); } catch (_) {}
+}
+function doFind(opts) {
+  const text = document.getElementById('findbar-input').value;
+  if (!text) { try { view.stopFindInPage('clearSelection'); } catch (_) {} document.getElementById('findbar-count').textContent = ''; return; }
+  try { view.findInPage(text, opts || {}); } catch (_) {}
+}
+(function wireFind() {
+  const inp = document.getElementById('findbar-input');
+  inp.addEventListener('input', () => doFind({ findNext: false }));
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); doFind({ findNext: true, forward: !e.shiftKey }); }
+    else if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
+  });
+  document.getElementById('findbar-next').addEventListener('click', () => doFind({ findNext: true, forward: true }));
+  document.getElementById('findbar-prev').addEventListener('click', () => doFind({ findNext: true, forward: false }));
+  document.getElementById('findbar-close').addEventListener('click', closeFind);
+})();
+view.addEventListener('found-in-page', (e) => {
+  const r = e.result || {};
+  if (r.matches != null) {
+    document.getElementById('findbar-count').textContent = (r.activeMatchOrdinal || 0) + '/' + r.matches;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// History (Go menu)
+// ---------------------------------------------------------------------------
+let historyCache = [];
+async function openHistory() {
+  const ul = document.getElementById('history-list');
+  ul.innerHTML = '<li class="h-empty">Loading…</li>';
+  openOverlay('history-overlay');
+  try { historyCache = await window.notscape.getHistory(); } catch (_) { historyCache = []; }
+  if (!historyCache.length) { ul.innerHTML = '<li class="h-empty">No history yet.</li>'; return; }
+  ul.innerHTML = historyCache.slice(0, 200).map((h, i) =>
+    '<li><span class="h-link" data-h="' + i + '" title="' + escapeHtml(h.url) + '">' +
+    escapeHtml(h.title ? h.title.replace(/ — Notscape$/, '') : h.url) + '</span>' +
+    '<span class="h-time">' + (h.at ? new Date(h.at).toLocaleString() : '') + '</span></li>'
+  ).join('');
+}
+(function wireHistory() {
+  const ul = document.getElementById('history-list');
+  ul.addEventListener('click', (e) => {
+    const link = e.target.closest('.h-link');
+    if (link) { const h = historyCache[parseInt(link.dataset.h, 10)]; if (h) { closeOverlay('history-overlay'); navigate(h.url); } }
+  });
+  document.getElementById('history-clear').addEventListener('click', async () => {
+    try { await window.notscape.clearHistory(); } catch (_) {}
+    historyCache = [];
+    document.getElementById('history-list').innerHTML = '<li class="h-empty">No history yet.</li>';
+  });
+})();
+
+// ---------------------------------------------------------------------------
+// Sound & delight — all opt-in via Mods. No audio files: synthesized in code.
+// ---------------------------------------------------------------------------
+let audioCtx = null;
+function ac() {
+  if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) { audioCtx = null; } }
+  if (audioCtx && audioCtx.state === 'suspended') { try { audioCtx.resume(); } catch (_) {} }
+  return audioCtx;
+}
+document.addEventListener('pointerdown', () => { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); });
+
+function blip(freq, dur, type, vol) {
+  const c = ac(); if (!c) return;
+  const o = c.createOscillator(), g = c.createGain(), t = c.currentTime;
+  o.type = type || 'square'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol || 0.12, t + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.08));
+  o.connect(g); g.connect(c.destination);
+  o.start(t); o.stop(t + (dur || 0.08) + 0.02);
+}
+function uiClick() { if (config.uiSounds) blip(880, 0.05, 'square', 0.07); }
+function uiDing() { if (config.uiSounds) { blip(660, 0.12, 'sine', 0.12); setTimeout(() => blip(990, 0.2, 'sine', 0.12), 90); } }
+
+// original asset-free chiptune loop (I–vi–IV–V arpeggio)
+const Chiptune = (function () {
+  const lead = [523, 659, 784, 659, 440, 523, 659, 523, 349, 440, 523, 440, 392, 494, 587, 494];
+  const bass = [131, 131, 110, 110, 87, 87, 98, 98];
+  let playing = false, timer = null, step = 0;
+  function tick() {
+    if (!playing) return;
+    const c = ac();
+    if (c) {
+      const t = c.currentTime;
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = 'square'; o.frequency.value = lead[step % lead.length];
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.05, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.18);
+      if (step % 2 === 0) {
+        const ob = c.createOscillator(), gb = c.createGain();
+        ob.type = 'triangle'; ob.frequency.value = bass[Math.floor(step / 2) % bass.length];
+        gb.gain.setValueAtTime(0.0001, t); gb.gain.linearRampToValueAtTime(0.08, t + 0.01);
+        gb.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+        ob.connect(gb); gb.connect(c.destination); ob.start(t); ob.stop(t + 0.34);
+      }
+    }
+    step = (step + 1) % lead.length;
+    timer = setTimeout(tick, 180);
+  }
+  return {
+    start() { if (playing || !ac()) return; playing = true; step = 0; tick(); },
+    stop() { playing = false; clearTimeout(timer); }
+  };
+})();
+
+// scrolling status-bar message (when idle)
+let scrollerTimer = null, scrollerPos = 0;
+const SCROLLER_MSG = '   ★ Welcome to Notscape ★ The Old Internet lives! ★ Best viewed at 800x600 ★ 56k and proud ★ Sign the guestbook! ★   ';
+function applyScroller() {
+  if (config.statusScroller && !scrollerTimer) {
+    scrollerTimer = setInterval(() => {
+      if (throbber.classList.contains('loading')) return;
+      scrollerPos = (scrollerPos + 1) % SCROLLER_MSG.length;
+      statusText.textContent = (SCROLLER_MSG.slice(scrollerPos) + SCROLLER_MSG.slice(0, scrollerPos)).slice(0, 72);
+    }, 220);
+  } else if (!config.statusScroller && scrollerTimer) {
+    clearInterval(scrollerTimer); scrollerTimer = null;
+    statusText.textContent = 'Done';
+  }
+}
+function applyExtras() {
+  if (config.chiptune && currentURL === HOME) Chiptune.start(); else Chiptune.stop();
+  applyScroller();
+}
+
+// ---------------------------------------------------------------------------
+// Notscape Webring — Prev/Random/Next in the footer actually cycle the ring
+// ---------------------------------------------------------------------------
+function ringHost(url) { try { return new URL(url).hostname.toLowerCase().replace(/^www\./, ''); } catch (_) { return ''; } }
+function ringIndexOf(host) {
+  if (!host) return -1;
+  const h = host.replace(/^www\./, '');
+  return window.NotscapeRing.findIndex((r) => { const rh = ringHost(r.url); return h === rh || h.endsWith('.' + rh); });
+}
+function isRingMember(host) { return ringIndexOf(host) >= 0; }
+let webringIndex = (function () { const n = parseInt(localStorage.getItem('ns-webring-idx') || '0', 10); return isNaN(n) ? 0 : n; })();
+function computeWebringData(host) {
+  const ring = window.NotscapeRing, len = ring.length;
+  let idx = ringIndexOf(host);
+  if (idx < 0) idx = webringIndex;
+  let r = Math.floor(Math.random() * len); if (r === idx) r = (r + 1) % len;
+  return { prev: ring[(idx - 1 + len) % len].url, next: ring[(idx + 1) % len].url, random: ring[r].url, pos: idx + 1, total: len };
+}
+function openWebring() {
+  const ul = document.getElementById('webring-list');
+  ul.innerHTML = window.NotscapeRing.map((r, i) =>
+    '<li><span class="wr-title" data-ring="' + i + '">' + escapeHtml(r.title) + '</span>' +
+    '<span class="wr-host">' + escapeHtml(ringHost(r.url)) + '</span>' +
+    '<div class="wr-desc">' + escapeHtml(r.desc) + '</div></li>'
+  ).join('');
+  openOverlay('webring-overlay');
+}
+function ringGo(which) {
+  const ring = window.NotscapeRing, len = ring.length;
+  if (which === 'list') { openWebring(); return; }
+  if (which === 'random') { navigate(ring[Math.floor(Math.random() * len)].url); return; }
+  const delta = which === 'prev' ? -1 : 1;
+  navigate(ring[((webringIndex + delta) % len + len) % len].url);
+}
+(function wireWebring() {
+  document.getElementById('webring-list').addEventListener('click', (e) => {
+    const t = e.target.closest('.wr-title');
+    if (t) { const r = window.NotscapeRing[parseInt(t.dataset.ring, 10)]; if (r) { closeOverlay('webring-overlay'); navigate(r.url); } }
+  });
+  document.getElementById('webring-random').addEventListener('click', () => {
+    const r = window.NotscapeRing[Math.floor(Math.random() * window.NotscapeRing.length)];
+    closeOverlay('webring-overlay'); navigate(r.url);
+  });
+  // start-page webring footer (links carry data-ring)
+  const hs = document.getElementById('home-screen');
+  if (hs) hs.addEventListener('click', (e) => {
+    const a = e.target.closest('[data-ring]');
+    if (a) { e.preventDefault(); ringGo(a.dataset.ring); }
+  });
+})();
 function syncMasterToggle() {
   const t = document.getElementById('master-toggle');
   t.classList.toggle('off', !config.enabled);
@@ -632,6 +930,8 @@ function openPrefs() {
   const sn = document.getElementById('pref-screenname');
   if (sn) window.notscape.getAccount().then((a) => { sn.value = (a && a.screenName) || 'saxman103'; });
   document.getElementById('blockAds').checked = !!config.blockAds;
+  document.getElementById('blockSocial').checked = !!config.blockSocial;
+  document.getElementById('hideComments').checked = !!config.hideComments;
   document.getElementById('allowAutoplay').checked = !!config.allowAutoplay;
   document.getElementById('safeMode').checked = !!config.safeMode;
   document.getElementById('prefRandomFlourishes').checked = !!config.randomFlourishes;
@@ -663,6 +963,10 @@ function openPrefs() {
   if (rf) rf.addEventListener('change', () => { config.randomFlourishes = rf.checked; saveConfig(); });
   const ap = document.getElementById('allowAutoplay');
   if (ap) ap.addEventListener('change', () => { config.allowAutoplay = ap.checked; saveConfig(); applyAutoplay(); });
+  const bso = document.getElementById('blockSocial');
+  if (bso) bso.addEventListener('change', () => { config.blockSocial = bso.checked; saveConfig(); window.notscape.setBlockSocial(bso.checked); });
+  const hc = document.getElementById('hideComments');
+  if (hc) hc.addEventListener('change', () => { config.hideComments = hc.checked; saveConfig(); applyPageCosmetics(); });
 })();
 
 // --- Flourishes (per current site) ---
@@ -697,15 +1001,22 @@ function toggleFlourish(host, key, on) {
 }
 // roll 1–3 random flourishes from the library
 function randomFlourishesFor() {
-  // "under construction" is loud — keep it out of the normal pool and add it only ~1/3
-  const keys = window.NotscapeFlourishes.list.map((f) => f.key).filter((k) => k !== 'construction');
-  const count = 1 + Math.floor(Math.random() * 3);
-  const pool = keys.slice();
+  // Balanced roll across categories so a site looks intentional, not clobbered:
+  // ~1 overlay, at most 1 title-text effect, maybe a page-style/cursor, 0-2 badges.
+  const C = window.NotscapeFlourishes.cats;
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const chosen = [];
-  for (let n = 0; n < count && pool.length; n++) {
-    chosen.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  if (Math.random() < 0.6) chosen.push(pick(C.overlay));
+  if (Math.random() < 0.55) chosen.push(pick(C.title));
+  if (Math.random() < 0.3) chosen.push(pick(C.page));
+  if (Math.random() < 0.3) chosen.push(pick(C.cursor));
+  const decoPool = C.decoration.slice();
+  const decoCount = Math.floor(Math.random() * 3); // 0,1,2
+  for (let i = 0; i < decoCount && decoPool.length; i++) {
+    chosen.push(decoPool.splice(Math.floor(Math.random() * decoPool.length), 1)[0]);
   }
-  if (Math.random() < 0.34) chosen.push('construction');
+  if (Math.random() < 0.34) chosen.push('construction'); // loud — keep it rare
+  if (!chosen.length) chosen.push(pick(C.overlay)); // never empty
   return chosen;
 }
 function reshuffleFlourishes() {
@@ -722,7 +1033,7 @@ function reshuffleFlourishes() {
 const overlay = document.getElementById('mods-overlay');
 const CHECKS = ['siteSkins', 'oldFonts', 'flatten', 'beveled', 'retroLinks', 'grayBg', 'tiledBg',
   'comicSans', 'retroMedia', 'killSticky', 'marquee', 'blink', 'construction', 'hitCounter', 'webring', 'dither',
-  'soundWelcome', 'soundMail', 'spoofUA'];
+  'soundWelcome', 'soundMail', 'chiptune', 'uiSounds', 'statusScroller', 'spoofUA'];
 const SLIDERS = ['age', 'pixelation', 'colorDepth'];
 
 function openMods() { syncModsPanel(); overlay.hidden = false; }
@@ -735,6 +1046,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (openMenuKey) closeMenus();
     if (!overlay.hidden) closeMods();
+    if (!document.getElementById('findbar').hidden) closeFind();
     document.querySelectorAll('.ns-overlay').forEach((ov) => { ov.hidden = true; });
   }
   if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'i')) {
@@ -743,6 +1055,11 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === 'F5' || (e.ctrlKey && e.key.toLowerCase() === 'r')) { e.preventDefault(); view.reload(); }
   if (e.ctrlKey && e.key.toLowerCase() === 'l') { e.preventDefault(); urlbar.focus(); urlbar.select(); }
+  if (e.ctrlKey && e.key.toLowerCase() === 'f') { e.preventDefault(); openFind(); }
+  if (e.ctrlKey && e.key.toLowerCase() === 'd') { e.preventDefault(); addCurrentBookmark(); }
+  if (e.ctrlKey && (e.key === '=' || e.key === '+')) { e.preventDefault(); zoomBy(0.5); }
+  if (e.ctrlKey && e.key === '-') { e.preventDefault(); zoomBy(-0.5); }
+  if (e.ctrlKey && e.key === '0') { e.preventDefault(); setZoom(0); }
 });
 
 function syncModsPanel() {
@@ -774,6 +1091,7 @@ CHECKS.forEach((k) => {
     if (k === 'spoofUA') { applyUserAgent(); view.reload(); }
     else if (k === 'blockAds') { window.notscape.setBlockAds(el.checked); view.reload(); }
     else if (k === 'safeMode') { window.notscape.setSafeMode(el.checked); view.reload(); }
+    else if (k === 'chiptune' || k === 'uiSounds' || k === 'statusScroller') applyExtras();
     else applyTransform();
   });
 });
@@ -942,6 +1260,7 @@ async function init() {
   } catch (_) {}
   // keep the main process's network flags in sync with saved prefs
   window.notscape.setBlockAds(config.blockAds);
+  window.notscape.setBlockSocial(config.blockSocial);
   window.notscape.setSafeMode(config.safeMode);
   bookmarks = await window.notscape.getBookmarks();
   siteFlourishes = {}; // session-only: random flourishes reset on restart

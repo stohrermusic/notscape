@@ -217,5 +217,16 @@
     return out;
   }
 
-  window.NotscapeFlourishes = { list: FLOURISHES, css: flourishCSS };
+  // Categories so the random roll can pick a balanced (not clobbered) set
+  const CATS = {
+    overlay: ['starfield', 'snow', 'scanlines', 'bubbles', 'vignette', 'lasergrid', 'plasma', 'fog', 'confetti', 'fireflies', 'coderain'],
+    cursor: ['sparkles', 'heartcursor'],
+    // title-text effects fight over the same headings — pick at most one
+    title: ['rainbow', 'neon', 'wordart', 'glitter', 'dropshadow', 'scroll', 'lake', 'wave', 'flametext', 'fadetext', 'nervous', 'chrome', 'outline', 'threeD', 'colorcycle', 'typewriter'],
+    page: ['comicsans', 'rainbowhr'],
+    decoration: ['counter', 'webring', 'guestbook', 'bestviewed', 'awards', 'emailme', 'midi']
+    // 'construction' is added separately at ~1/3 odds
+  };
+
+  window.NotscapeFlourishes = { list: FLOURISHES, css: flourishCSS, cats: CATS };
 })();

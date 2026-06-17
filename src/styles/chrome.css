@@ -16,7 +16,7 @@ html, body {
 #app { display: flex; flex-direction: column; height: 100vh; }
 
 /* shared 3D button */
-.tbtn, .tb-buttons button, .presets button, #mods-close, .mp-close, #status-meter {
+.tbtn, .tb-buttons button, .presets button, #mods-close, .mp-close, #findbar button, #status-meter {
   background: #c0c0c0;
   border: 2px solid;
   border-color: #ffffff #000000 #000000 #ffffff;
@@ -82,6 +82,42 @@ html, body {
 .menu-entry.disabled { color: #808080; text-shadow: 1px 1px 0 #fff; }
 .menu-entry.disabled:hover { background: transparent; color: #808080; }
 .menu-sep { height: 0; border-top: 1px solid #808080; border-bottom: 1px solid #fff; margin: 3px 2px; }
+
+/* FIND BAR */
+#findbar {
+  position: absolute; top: 6px; right: 16px; z-index: 30;
+  display: flex; align-items: center; gap: 4px; padding: 4px 6px;
+  background: #c0c0c0;
+  border: 2px solid; border-color: #fff #000 #000 #fff;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.35);
+}
+#findbar[hidden] { display: none; }
+.fb-label { font-weight: bold; }
+#findbar-input { width: 180px; padding: 2px 4px; background: #fff; border: 2px inset #c0c0c0; font-family: inherit; }
+#findbar-count { font-size: 11px; color: #404040; min-width: 56px; text-align: center; }
+#findbar button { padding: 1px 6px; }
+
+/* HISTORY LIST */
+#history-list { list-style: none; margin: 0; padding: 0; }
+#history-list li {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 3px 4px; border-bottom: 1px dotted #808080; font-size: 12px;
+}
+#history-list .h-link {
+  color: #0000ee; text-decoration: underline; cursor: default;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 380px;
+}
+#history-list .h-link:hover { color: #ff0000; }
+#history-list .h-time { color: #808080; font-size: 11px; flex: none; margin-left: 8px; }
+.h-empty { font-style: italic; color: #404040; padding: 4px; }
+
+/* WEBRING DIRECTORY */
+#webring-list { list-style: none; margin: 0; padding: 0; }
+#webring-list li { padding: 5px 4px; border-bottom: 1px dotted #808080; }
+#webring-list .wr-title { color: #0000ee; text-decoration: underline; cursor: default; font-weight: bold; }
+#webring-list .wr-title:hover { color: #ff0000; }
+#webring-list .wr-host { color: #008000; font-size: 11px; margin-left: 6px; }
+#webring-list .wr-desc { font-size: 11px; color: #404040; margin-top: 1px; }
 
 /* TOOLBAR */
 #toolbar {

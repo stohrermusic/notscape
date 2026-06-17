@@ -63,6 +63,16 @@
     <div id="content">
       <webview id="view" src="about:blank" allowpopups></webview>
 
+      <!-- FIND BAR (Ctrl+F) -->
+      <div id="findbar" hidden>
+        <span class="fb-label">Find:</span>
+        <input id="findbar-input" type="text" spellcheck="false" autocomplete="off" />
+        <span id="findbar-count">&nbsp;</span>
+        <button id="findbar-prev" title="Previous">▲</button>
+        <button id="findbar-next" title="Next">▼</button>
+        <button id="findbar-close" title="Close (Esc)">×</button>
+      </div>
+
       <!-- RSS START PAGE (the "welcome screen") -->
       <div id="home-screen">
         <div class="hs-page">
@@ -126,8 +136,11 @@
           </div>
 
           <div class="hs-webring">
-            This page is part of the <b>Old Web Webring</b> &nbsp;
-            [ <a href="#">&laquo; Prev</a> | <a href="#">Random</a> | <a href="#">Next &raquo;</a> ]
+            <b>Notscape Webring</b> &mdash; the best of the indie web<br />
+            [ <a href="#" data-ring="prev">&laquo; Prev</a> |
+              <a href="#" data-ring="random">Random</a> |
+              <a href="#" data-ring="next">Next &raquo;</a> ]
+            &nbsp; <a href="#" data-ring="list">See all &raquo;</a>
           </div>
           <div class="hs-footer">🚧 Best viewed in Notscape Navigator at 800&times;600 &middot; populate it with your own RSS feeds! 🚧</div>
         </div>
@@ -226,9 +239,12 @@
         </fieldset>
 
         <fieldset>
-          <legend>Sounds</legend>
+          <legend>Sounds &amp; Extras</legend>
           <label><input type="checkbox" id="soundWelcome" /> Play "Welcome!" when you sign on</label>
           <label><input type="checkbox" id="soundMail" /> Play "You've got mail!" when you open Gmail</label>
+          <label><input type="checkbox" id="chiptune" /> Chiptune music on the start page</label>
+          <label><input type="checkbox" id="uiSounds" /> Click &amp; error sounds</label>
+          <label><input type="checkbox" id="statusScroller" /> Scrolling status-bar message</label>
           <p class="mp-hint">Drop <code>welcome.wav</code> / <code>youve-got-mail.wav</code> in the
             <code>assets/</code> folder for the real clips; otherwise a text-to-speech voice fills in.</p>
         </fieldset>
@@ -262,8 +278,10 @@
         </fieldset>
 
         <fieldset>
-          <legend>Ads &amp; Network</legend>
+          <legend>Ads, Social &amp; Content</legend>
           <label><input type="checkbox" id="blockAds" /> Block ads &amp; trackers (recommended). <i>Reloads.</i></label>
+          <label><input type="checkbox" id="blockSocial" /> No social media (block Facebook, Instagram, X, TikTok&hellip;)</label>
+          <label><input type="checkbox" id="hideComments" /> Hide comment sections (YouTube, Disqus, etc.)</label>
           <label><input type="checkbox" id="allowAutoplay" /> Allow media to autoplay (unchecked = wait for a click)</label>
         </fieldset>
         <fieldset>
@@ -323,9 +341,34 @@
     </div>
   </div>
 
+  <!-- WEBRING DIRECTORY (Go menu) -->
+  <div id="webring-overlay" class="ns-overlay" hidden>
+    <div class="ns-panel">
+      <div class="mp-title"><span>💍 Notscape Webring</span><button class="mp-close" data-close="webring-overlay">×</button></div>
+      <div class="mp-body">
+        <p class="mp-hint">A hand-picked ring of personal, non-corporate, interesting sites.
+          The webring footer's <b>Prev / Random / Next</b> cycle through these too.</p>
+        <div class="presets" style="margin-bottom:6px"><button id="webring-random">🎲 Visit a random site</button></div>
+        <ul id="webring-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY (Go menu) -->
+  <div id="history-overlay" class="ns-overlay" hidden>
+    <div class="ns-panel">
+      <div class="mp-title"><span>History</span><button class="mp-close" data-close="history-overlay">×</button></div>
+      <div class="mp-body">
+        <div class="presets" style="margin-bottom:6px"><button id="history-clear">Clear History</button></div>
+        <ul id="history-list"></ul>
+      </div>
+    </div>
+  </div>
+
   <script src="inject/engine.js"></script>
   <script src="inject/styles.js"></script>
   <script src="inject/flourishes.js"></script>
+  <script src="inject/webring.js"></script>
   <script src="home.js"></script>
   <script src="renderer.js"></script>
 </body>

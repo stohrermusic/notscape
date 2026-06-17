@@ -101,15 +101,18 @@ function notscapeEngine() {
     return wrap;
   }
   function buildWebring() {
+    var d = (NS.cfg && NS.cfg.webringData) || {};
+    var prev = d.prev || '#', rnd = d.random || '#', next = d.next || '#';
+    var pos = (d.pos != null) ? (' &middot; site ' + d.pos + ' of ' + d.total) : '';
     var w = document.createElement('div');
     w.id = 'ns-webring';
     w.setAttribute('data-ns-deco', '1');
     w.style.cssText = 'all:revert;display:block;text-align:center;padding:12px;background:#000080;color:#fff;font-family:"MS Sans Serif",Tahoma,sans-serif;border-top:3px ridge #88f';
-    w.innerHTML = 'This site is a proud member of the <b>Old Web Webring</b><br>' +
-      '[ <a href="#" style="color:#ffff00">&laquo; Prev</a> &nbsp;|&nbsp; ' +
-      '<a href="#" style="color:#ffff00">Random</a> &nbsp;|&nbsp; ' +
-      '<a href="#" style="color:#ffff00">Next &raquo;</a> ]<br>' +
-      '<small>Want to join? Sign the guestbook!</small>';
+    w.innerHTML = 'Member of the <b>Notscape Webring</b>' + pos + ' &mdash; the best of the indie web<br>' +
+      '[ <a href="' + prev + '" style="color:#ffff00">&laquo; Prev</a> &nbsp;|&nbsp; ' +
+      '<a href="' + rnd + '" style="color:#ffff00">Random</a> &nbsp;|&nbsp; ' +
+      '<a href="' + next + '" style="color:#ffff00">Next &raquo;</a> ]<br>' +
+      '<small>A hand-picked ring of personal, non-corporate sites.</small>';
     return w;
   }
 

@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('notscape', {
   // window chrome
   windowControl: (action) => ipcRenderer.send('window-control', action),
   onWindowState: (cb) => ipcRenderer.on('window-state', (_e, s) => cb(s)),
+  newWindow: () => ipcRenderer.send('window:new'),
 
   // splash -> main handshake
   splashConnected: () => ipcRenderer.send('splash-connected'),
@@ -27,6 +28,7 @@ contextBridge.exposeInMainWorld('notscape', {
   // network / privacy
   setSafeMode: (on) => ipcRenderer.send('net:safe-mode', on),
   setBlockAds: (on) => ipcRenderer.send('net:block-ads', on),
+  setBlockSocial: (on) => ipcRenderer.send('net:block-social', on),
   clearData: () => ipcRenderer.invoke('privacy:clear'),
 
   // RSS start page

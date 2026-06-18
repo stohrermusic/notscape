@@ -9,6 +9,9 @@ const fs = require('fs');
 
 // Let the modem screech + any page audio play without a user gesture.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// No password saving / autofill — Notscape never offers to remember credentials.
+app.commandLine.appendSwitch('disable-features',
+  'AutofillServerCommunication,AutofillEnableAccountWalletStorage,PasswordManagerOnboarding,PasswordImport,PasswordCheck,PasswordLeakDetection');
 
 // --- debug log (so we can watch a browsing session and catch errors) ---
 const LOG_PATH = path.join(__dirname, 'notscape-debug.log');

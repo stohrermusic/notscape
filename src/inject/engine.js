@@ -267,6 +267,102 @@ function notscapeEngine() {
     else if (!on && breatherOn) { breatherOn = false; window.removeEventListener('scroll', onBreatherScroll); }
   }
 
+  // Click-to-load large images (slow-connection style) — small graphics are spared
+  function lazyImages(on) {
+    if (!on) return;
+    each('img', function (img) {
+      if (img.getAttribute('data-ns-lazy') || img.getAttribute('data-ns-img')) return;
+      var src = img.getAttribute('src') || '';
+      if (!src || /^data:/.test(src)) return;
+      var w = parseInt(img.getAttribute('width') || '0', 10) || img.naturalWidth || 0;
+      var h = parseInt(img.getAttribute('height') || '0', 10) || img.naturalHeight || 0;
+      if (w && h && w < 150 && h < 150) return; // small icon/graphic — leave alone
+      img.setAttribute('data-ns-lazy', '1');
+      var ph = document.createElement('span');
+      ph.setAttribute('data-ns-deco', '1');
+      var ww = w ? Math.min(w, 480) + 'px' : 'auto';
+      var hh = h ? Math.min(h, 360) + 'px' : 'auto';
+      ph.style.cssText = 'display:inline-flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;' +
+        'width:' + ww + ';height:' + hh + ';min-width:120px;min-height:54px;padding:8px;box-sizing:border-box;' +
+        'border:2px inset #c0c0c0;background:#e8e8e8;color:#333;font:12px "MS Sans Serif",Tahoma,sans-serif;cursor:pointer;vertical-align:middle';
+      var alt = (img.getAttribute('alt') || '').slice(0, 90).replace(/[<>&]/g, '');
+      ph.innerHTML = '🖼 <u>Load image</u>' + (alt ? '<br><span style="color:#666">' + alt + '</span>' : '');
+      img.removeAttribute('srcset');
+      img.setAttribute('data-ns-src', src);
+      img.removeAttribute('src'); // cancel the download until requested
+      img.style.display = 'none';
+      if (img.parentNode) img.parentNode.insertBefore(ph, img);
+      ph.addEventListener('click', function () {
+        img.setAttribute('src', img.getAttribute('data-ns-src') || '');
+        img.style.display = '';
+        ph.remove();
+      });
+    });
+  }
+
+  // Cookie/consent walls — click "reject / necessary only" where we recognize it
+  function killCookieBanners(on) {
+    if (!on) return;
+    var rejectSels = [
+      '#onetrust-reject-all-handler', '.ot-pc-refuse-all-handler',
+      '#CybotCookiebotDialogBodyButtonDecline', '#CybotCookiebotDialogBodyLevelButtonLevelOptinDeclineAll',
+      '#didomi-notice-disagree-button', '.didomi-continue-without-agreeing',
+      '[data-testid="uc-deny-all-button"]', '[data-testid="reject-all-button"]',
+      'button[aria-label="Reject all" i]', 'button[aria-label="Decline" i]',
+      '.qc-cmp2-summary-buttons button[mode="secondary"]'
+    ];
+    for (var i = 0; i < rejectSels.length; i++) {
+      var b = null; try { b = document.querySelector(rejectSels[i]); } catch (e) {}
+      if (b) { try { b.click(); } catch (e) {} break; }
+    }
+  }
+
+  // Enforce readability — fix text whose contrast with its background is too low
+  function parseColor(str) {
+    if (!str) return null;
+    var m = str.match(/rgba?\(([^)]+)\)/);
+    if (!m) return null;
+    var p = m[1].split(',');
+    return { r: parseFloat(p[0]), g: parseFloat(p[1]), b: parseFloat(p[2]), a: p.length > 3 ? parseFloat(p[3]) : 1 };
+  }
+  function lum(c) {
+    var a = [c.r, c.g, c.b].map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+    return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+  }
+  function contrastRatio(c1, c2) {
+    var l1 = lum(c1), l2 = lum(c2), hi = Math.max(l1, l2), lo = Math.min(l1, l2);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+  function effBg(el) {
+    var node = el;
+    while (node && node.nodeType === 1) {
+      var c = null; try { c = parseColor(getComputedStyle(node).backgroundColor); } catch (e) {}
+      if (c && c.a > 0.1) return c;
+      node = node.parentElement;
+    }
+    return { r: 255, g: 255, b: 255, a: 1 };
+  }
+  function forceReadable(on) {
+    if (!on) return;
+    var els;
+    try { els = document.querySelectorAll('p,li,a,span,h1,h2,h3,h4,h5,h6,td,th,dd,dt,label,blockquote,strong,em,b,i,small,figcaption,button'); }
+    catch (e) { return; }
+    var n = Math.min(els.length, 3000);
+    for (var i = 0; i < n; i++) {
+      var el = els[i];
+      if (el.getAttribute('data-ns-read')) continue;
+      el.setAttribute('data-ns-read', '1');
+      if (!el.textContent || !el.textContent.trim()) continue;
+      var cs; try { cs = getComputedStyle(el); } catch (e) { continue; }
+      var color = parseColor(cs.color);
+      if (!color || color.a < 0.1) continue;
+      var bg = effBg(el);
+      if (contrastRatio(color, bg) < 3.5) {
+        el.style.setProperty('color', lum(bg) > 0.4 ? '#111' : '#f0f0f0', 'important');
+      }
+    }
+  }
+
   function applyFlourishes(list) {
     list = list || [];
     var has = function (k) { return list.indexOf(k) > -1; };
@@ -336,6 +432,9 @@ function notscapeEngine() {
     var c = NS.cfg;
     if (c.killSticky) unstick(true);
     unlockScroll();
+    if (c.killCookieBanners) killCookieBanners(true);
+    if (c.lazyImages) lazyImages(true);
+    if (c.forceReadable) forceReadable(true);
     if (c.blink) blink(true);
     if (c.calmMode) calmHeadlines(true);
     if (c.marquee) marquee(true);
@@ -387,6 +486,9 @@ function notscapeEngine() {
       if (NS.cfg.dither) retroImages(NS.cfg.pixelation || 0, NS.cfg.colorDepth != null ? NS.cfg.colorDepth : 1);
       calmHeadlines(!!NS.cfg.calmMode);
       setBreather(!!NS.cfg.scrollBreather);
+      killCookieBanners(!!NS.cfg.killCookieBanners);
+      lazyImages(!!NS.cfg.lazyImages);
+      forceReadable(!!NS.cfg.forceReadable);
       applyFlourishes(NS.cfg.flourishes);
     } catch (e) {}
     applying = false;

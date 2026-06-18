@@ -17,6 +17,11 @@
     { key: 'rainbowhr',    name: '🌈 Rainbow Rules',       desc: 'Horizontal rules become animated rainbows.' },
     { key: 'dropshadow',   name: '🔲 Chunky Shadows',      desc: 'Big offset drop-shadows on headings.' },
     { key: 'comicsans',    name: '✏ Comic Sans',          desc: 'Everything in Comic Sans, obviously.' },
+    { key: 'fonttimes',    name: '📜 Times New Roman',      desc: 'The whole page in classic Times.' },
+    { key: 'fonttrebuchet',name: '🅣 Trebuchet',            desc: 'That late-90s Trebuchet MS look.' },
+    { key: 'fontcourier',  name: '⌨ Courier',              desc: 'Everything in typewriter monospace.' },
+    { key: 'fontimpact',   name: '🅸 Impact Headings',      desc: 'Headings in bold Impact.' },
+    { key: 'fontblack',    name: '⬛ Arial Black Headings',  desc: 'Headings in heavy Arial Black.' },
     { key: 'bubbles',      name: '🫧 Rising Bubbles',      desc: 'Bubbles float up the page.' },
     { key: 'vignette',     name: '📷 CRT Vignette',        desc: 'Darkened, rounded monitor edges.' },
     { key: 'lasergrid',    name: '🌆 Synthwave Grid',      desc: 'A neon perspective grid along the bottom.' },
@@ -107,6 +112,16 @@
       h1,h2,h3{text-shadow:3px 3px 0 #808080,6px 6px 0 rgba(0,0,0,.25)!important}`,
     comicsans: `
       html body,html body *{font-family:'Comic Sans MS','Comic Sans',cursive!important}`,
+    fonttimes: `
+      html body,html body *{font-family:'Times New Roman',Times,serif!important}`,
+    fonttrebuchet: `
+      html body,html body *{font-family:'Trebuchet MS','Lucida Grande',Tahoma,sans-serif!important}`,
+    fontcourier: `
+      html body,html body *{font-family:'Courier New',Courier,monospace!important}`,
+    fontimpact: `
+      h1,h2,h3{font-family:Impact,'Arial Black',Charcoal,sans-serif!important;letter-spacing:.5px!important;font-weight:400!important}`,
+    fontblack: `
+      h1,h2,h3{font-family:'Arial Black','Arial Bold',Gadget,sans-serif!important;font-weight:900!important}`,
     bubbles: `
       .ns-fx-bubbles{position:fixed;inset:0;pointer-events:none;z-index:2147483601;
         background-image:
@@ -222,8 +237,8 @@
     overlay: ['starfield', 'snow', 'scanlines', 'bubbles', 'vignette', 'lasergrid', 'plasma', 'fog', 'confetti', 'fireflies', 'coderain'],
     cursor: ['sparkles', 'heartcursor'],
     // title-text effects fight over the same headings — pick at most one
-    title: ['rainbow', 'neon', 'wordart', 'glitter', 'dropshadow', 'scroll', 'lake', 'wave', 'flametext', 'fadetext', 'nervous', 'chrome', 'outline', 'threeD', 'colorcycle', 'typewriter'],
-    page: ['comicsans', 'rainbowhr'],
+    title: ['rainbow', 'neon', 'wordart', 'glitter', 'dropshadow', 'scroll', 'lake', 'wave', 'flametext', 'fadetext', 'nervous', 'chrome', 'outline', 'threeD', 'colorcycle', 'typewriter', 'fontimpact', 'fontblack'],
+    page: ['comicsans', 'rainbowhr', 'fonttimes', 'fonttrebuchet', 'fontcourier'],
     decoration: ['counter', 'webring', 'guestbook', 'bestviewed', 'awards', 'emailme', 'midi']
     // 'construction' is added separately at ~1/3 odds
   };

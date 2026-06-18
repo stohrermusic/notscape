@@ -53,7 +53,8 @@
     <!-- LOCATION BAR -->
     <div id="locationbar">
       <span class="loc-label">Location:</span>
-      <input id="urlbar" type="text" spellcheck="false"
+      <input id="urlbar" type="text" spellcheck="false" autocomplete="off"
+             autocorrect="off" autocapitalize="off"
              placeholder="Type a URL or search the old web..." />
       <button id="subscribe-btn" class="tbtn" hidden title="Add this site's RSS feed to your start page">📡 Subscribe</button>
       <button id="go" class="tbtn">Go</button>
@@ -240,6 +241,7 @@
         <fieldset>
           <legend>Calmer Web</legend>
           <label><input type="checkbox" id="calmMode" /> Calm Mode &mdash; hide engagement bait (recommendations, view/like counts, badges) &amp; de-shout ALL-CAPS headlines</label>
+          <label><input type="checkbox" id="forceReadable" /> Enforce readability &mdash; fix low-contrast text so it stays legible</label>
           <label><input type="checkbox" id="grayscale" /> Grayscale everything (less dopamine, more focus)</label>
           <label><input type="checkbox" id="scrollBreather" /> Scroll breather &mdash; a gentle "take a breath" after long scrolling</label>
         </fieldset>
@@ -302,6 +304,13 @@
           <legend>Flourishes</legend>
           <label><input type="checkbox" id="prefRandomFlourishes" /> Auto-add random 90s flourishes to each site
             (kept until restart or Clear Data)</label>
+          <label class="pref-row">Intensity:
+            <select id="pref-flourishLevel">
+              <option value="light">Light</option>
+              <option value="moderate">Moderate</option>
+              <option value="heavy">Heavy</option>
+            </select>
+          </label>
         </fieldset>
 
         <fieldset>
@@ -309,6 +318,8 @@
           <label><input type="checkbox" id="blockAds" /> Block ads &amp; trackers (recommended). <i>Reloads.</i></label>
           <label><input type="checkbox" id="blockSocial" /> No social media (block Facebook, Instagram, X, TikTok&hellip;)</label>
           <label><input type="checkbox" id="hideComments" /> Hide comment sections (YouTube, Disqus, etc.)</label>
+          <label><input type="checkbox" id="killCookieBanners" /> Dismiss cookie banners (reject all / necessary-only when possible)</label>
+          <label><input type="checkbox" id="lazyImages" /> Click-to-load large images (slow-connection style). <i>Reloads.</i></label>
           <label><input type="checkbox" id="allowAutoplay" /> Allow media to autoplay (unchecked = wait for a click)</label>
         </fieldset>
         <fieldset>

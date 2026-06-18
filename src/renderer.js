@@ -92,20 +92,24 @@ const DEFAULT_CONFIG = {
   darkMode: false,
   // calmer web
   calmMode: true,   // hide engagement bait (metrics, rails, badges) + de-shout headlines
+  forceReadable: true, // fix low-contrast text so it stays legible
   grayscale: false,
   scrollBreather: false,
   // network / privacy
   blockAds: true,
   blockSocial: true,
   hideComments: true,
+  killCookieBanners: true,
+  lazyImages: false,        // click-to-load large images (slow-connection style)
   allowAutoplay: false,
   stripParams: true,
-  clearOnExit: false,
+  clearOnExit: true,        // cookies & cache cleared every session
   searchEngine: 'marginalia',
   safeMode: false,
   spoofUA: false,
   // flourishes
-  randomFlourishes: true
+  randomFlourishes: true,
+  flourishLevel: 'moderate' // light | moderate | heavy
 };
 
 let config = Object.assign({}, DEFAULT_CONFIG);
@@ -225,8 +229,8 @@ async function applyTransform() {
   const onRing = isRingMember(host);
   const webringOn = config.webring || fset.has('webring') || onRing;
   const webringData = webringOn ? computeWebringData(host) : null;
-  // flourishes / ring footer apply even when the master transform is off
-  const active = config.enabled || fkeys.length > 0 || onRing;
+  // flourishes / ring footer / privacy bits apply even when the master transform is off
+  const active = config.enabled || fkeys.length > 0 || onRing || config.killCookieBanners || config.lazyImages;
 
   // 1) CSS layer (CSP-proof via insertCSS)
   await clearCSS();
@@ -262,6 +266,9 @@ async function applyTransform() {
         : { enabled: false, flourishes: fkeys,
             calmMode: config.calmMode,
             scrollBreather: config.scrollBreather,
+            killCookieBanners: config.killCookieBanners,
+            lazyImages: config.lazyImages,
+            forceReadable: config.forceReadable,
             marquee: fset.has('scroll'),
             construction: fset.has('construction'),
             hitCounter: fset.has('counter'),
@@ -318,12 +325,23 @@ const CALM_CSS = [
   '[data-ns-calm]{text-transform:lowercase!important}\n' +
   '[data-ns-calm]::first-letter{text-transform:uppercase!important}';
 
+// Cookie/consent banners — hide the ones we can't auto-dismiss
+const COOKIE_CSS = [
+  '#onetrust-banner-sdk', '#onetrust-consent-sdk',
+  '#CybotCookiebotDialog', '#cookiebanner', '.cookie-banner', '.cookie-consent',
+  '.cookie-notice', '#cookie-notice', '#cookie-law-info-bar', '.gdpr-banner',
+  '#didomi-host', '.qc-cmp2-container', '#usercentrics-root', '.cc-window',
+  '#cookieConsent', '#gdpr-cookie-message',
+  '[class*="cookie-consent" i]', '[class*="cookie-banner" i]', '[id*="cookie-consent" i]'
+].join(',') + '{display:none!important}';
+
 async function applyPageCosmetics() {
   if (adCssKey) { try { await view.removeInsertedCSS(adCssKey); } catch (_) {} adCssKey = null; }
   if (isHome(currentURL) || isAuthHost(hostOf(currentURL))) return;
   let css = '';
   if (config.blockAds) css += AD_COSMETIC_CSS + '\n';
   if (config.hideComments) css += COMMENT_CSS + '\n';
+  if (config.killCookieBanners) css += COOKIE_CSS + '\n';
   if (config.calmMode) css += CALM_CSS + '\n';
   // combine html filters: grayscale + smart-invert dark mode
   const filters = [];
@@ -1146,7 +1164,10 @@ function openPrefs() {
   document.getElementById('blockAds').checked = !!config.blockAds;
   document.getElementById('blockSocial').checked = !!config.blockSocial;
   document.getElementById('hideComments').checked = !!config.hideComments;
+  document.getElementById('killCookieBanners').checked = !!config.killCookieBanners;
+  document.getElementById('lazyImages').checked = !!config.lazyImages;
   document.getElementById('allowAutoplay').checked = !!config.allowAutoplay;
+  document.getElementById('pref-flourishLevel').value = config.flourishLevel || 'moderate';
   document.getElementById('stripParams').checked = !!config.stripParams;
   document.getElementById('clearOnExit').checked = !!config.clearOnExit;
   document.getElementById('pref-search').value = config.searchEngine || 'marginalia';
@@ -1190,6 +1211,12 @@ function openPrefs() {
   if (coe) coe.addEventListener('change', () => { config.clearOnExit = coe.checked; saveConfig(); });
   const se = document.getElementById('pref-search');
   if (se) se.addEventListener('change', () => { config.searchEngine = se.value; saveConfig(); });
+  const kcb = document.getElementById('killCookieBanners');
+  if (kcb) kcb.addEventListener('change', () => { config.killCookieBanners = kcb.checked; saveConfig(); applyPageCosmetics(); applyTransform(); });
+  const li = document.getElementById('lazyImages');
+  if (li) li.addEventListener('change', () => { config.lazyImages = li.checked; saveConfig(); view.reload(); });
+  const fl = document.getElementById('pref-flourishLevel');
+  if (fl) fl.addEventListener('change', () => { config.flourishLevel = fl.value; saveConfig(); });
 })();
 
 // --- Flourishes (per current site) ---
@@ -1228,17 +1255,21 @@ function randomFlourishesFor() {
   // ~1 overlay, at most 1 title-text effect, maybe a page-style/cursor, 0-2 badges.
   const C = window.NotscapeFlourishes.cats;
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const lvl = config.flourishLevel || 'moderate';
+  const P = lvl === 'light' ? { overlay: 0.35, title: 0.3, page: 0.15, cursor: 0.15, decoMax: 1, constr: 0.1 }
+    : lvl === 'heavy' ? { overlay: 0.85, title: 0.8, page: 0.55, cursor: 0.5, decoMax: 3, constr: 0.5 }
+    : { overlay: 0.6, title: 0.55, page: 0.3, cursor: 0.3, decoMax: 2, constr: 0.34 };
   const chosen = [];
-  if (Math.random() < 0.6) chosen.push(pick(C.overlay));
-  if (Math.random() < 0.55) chosen.push(pick(C.title));
-  if (Math.random() < 0.3) chosen.push(pick(C.page));
-  if (Math.random() < 0.3) chosen.push(pick(C.cursor));
+  if (Math.random() < P.overlay) chosen.push(pick(C.overlay));
+  if (Math.random() < P.title) chosen.push(pick(C.title));
+  if (Math.random() < P.page) chosen.push(pick(C.page));
+  if (Math.random() < P.cursor) chosen.push(pick(C.cursor));
   const decoPool = C.decoration.slice();
-  const decoCount = Math.floor(Math.random() * 3); // 0,1,2
+  const decoCount = Math.floor(Math.random() * (P.decoMax + 1));
   for (let i = 0; i < decoCount && decoPool.length; i++) {
     chosen.push(decoPool.splice(Math.floor(Math.random() * decoPool.length), 1)[0]);
   }
-  if (Math.random() < 0.34) chosen.push('construction'); // loud — keep it rare
+  if (Math.random() < P.constr) chosen.push('construction'); // loud — keep it rare
   if (!chosen.length) chosen.push(pick(C.overlay)); // never empty
   return chosen;
 }
@@ -1256,7 +1287,7 @@ function reshuffleFlourishes() {
 const overlay = document.getElementById('mods-overlay');
 const CHECKS = ['siteSkins', 'oldFonts', 'flatten', 'beveled', 'retroLinks', 'grayBg', 'tiledBg',
   'comicSans', 'retroMedia', 'killSticky', 'marquee', 'blink', 'construction', 'hitCounter', 'webring', 'dither',
-  'darkMode', 'calmMode', 'grayscale', 'scrollBreather', 'soundWelcome', 'soundMail', 'chiptune', 'uiSounds', 'statusScroller', 'spoofUA'];
+  'darkMode', 'calmMode', 'forceReadable', 'grayscale', 'scrollBreather', 'soundWelcome', 'soundMail', 'chiptune', 'uiSounds', 'statusScroller', 'spoofUA'];
 const SLIDERS = ['age', 'pixelation', 'colorDepth'];
 
 function openMods() { syncModsPanel(); overlay.hidden = false; }

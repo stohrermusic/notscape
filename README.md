@@ -11,7 +11,7 @@ with a synthesized modem screech) every time you launch.
 
 ## Install (Windows)
 
-Grab **`Notscape-Setup-0.5.0.exe`** from the
+Grab **`Notscape-Setup-0.6.0.exe`** from the
 [latest release](https://github.com/stohrermusic/notscape/releases), run it, and
 launch Notscape from the Start menu or desktop shortcut.
 
@@ -31,7 +31,7 @@ npm install
 npm run installer     # generates the icon, packages the app, runs Inno Setup
 ```
 
-This produces `dist/Notscape-Setup-0.5.0.exe`. Requires
+This produces `dist/Notscape-Setup-0.6.0.exe`. Requires
 [Inno Setup 6](https://jrsoftware.org/isdl.php) on `PATH` (the `iscc` command).
 `npm run dist:linux` / `npm run dist:mac` build an AppImage / dmg, but those must
 be run on their native OS.

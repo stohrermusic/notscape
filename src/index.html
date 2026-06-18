@@ -200,6 +200,16 @@
         <fieldset>
           <legend>Sliders</legend>
           <label class="slider">
+            <span>Brightness <b id="v-brightness">42</b> &mdash; dim bright pages (or lift dark ones)</span>
+            <input type="range" id="brightness" min="0" max="100" value="42" />
+          </label>
+          <label class="slider">
+            <span>Contrast <b id="v-contrast">55</b> &mdash; text vs. background</span>
+            <input type="range" id="contrast" min="0" max="100" value="55" />
+          </label>
+          <p class="mp-hint">Brightness &amp; contrast tint every page (and dim the flourishes with it).
+            Slide brightness left to calm a glaring white page, right to soften Dark Mode's black.</p>
+          <label class="slider">
             <span>GeoCities-ify <b id="v-geoCities">0</b>% &mdash; how hard to hit the cookie-cutter sites</span>
             <input type="range" id="geoCities" min="0" max="100" value="0" />
           </label>
@@ -306,6 +316,13 @@
           <legend>Flourishes</legend>
           <label><input type="checkbox" id="prefRandomFlourishes" /> Auto-add random 90s flourishes to each site
             (kept until restart or Clear Data)</label>
+          <label class="pref-row">Theme:
+            <select id="pref-flourishTheme">
+              <option value="all">All &mdash; anything goes</option>
+              <option value="subdued">Subdued &mdash; calmer, less glare</option>
+              <option value="dark">Dark &mdash; neon-on-black, night vibe</option>
+            </select>
+          </label>
           <label class="pref-row">Intensity:
             <select id="pref-flourishLevel">
               <option value="light">Light</option>

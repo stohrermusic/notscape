@@ -243,5 +243,25 @@
     // 'construction' is added separately at ~1/3 odds
   };
 
-  window.NotscapeFlourishes = { list: FLOURISHES, css: flourishCSS, cats: CATS };
+  // Themes constrain which flourishes get rolled, for a calmer / darker vibe.
+  // 'all' = the whole library; the others are curated include-lists per category.
+  const THEMES = {
+    all: null,
+    subdued: {
+      overlay: ['starfield', 'snow', 'scanlines', 'fog', 'vignette'],
+      cursor: ['sparkles', 'heartcursor'],
+      title: ['dropshadow', 'chrome', 'outline', 'threeD', 'lake', 'fadetext', 'nervous', 'scroll', 'wave', 'fontimpact', 'fontblack'],
+      page: ['fonttimes', 'fonttrebuchet', 'fontcourier'],
+      decoration: ['counter', 'webring', 'guestbook', 'bestviewed', 'emailme', 'midi']
+    },
+    dark: {
+      overlay: ['starfield', 'scanlines', 'vignette', 'coderain', 'fog'],
+      cursor: ['sparkles'],
+      title: ['chrome', 'outline', 'threeD', 'neon', 'fadetext', 'fontcourier', 'fontimpact', 'fontblack'],
+      page: ['fontcourier'],
+      decoration: ['counter', 'webring', 'bestviewed']
+    }
+  };
+
+  window.NotscapeFlourishes = { list: FLOURISHES, css: flourishCSS, cats: CATS, themes: THEMES };
 })();

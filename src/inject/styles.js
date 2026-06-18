@@ -19,12 +19,14 @@
   // unlike a dark starfield which hides behind opaque content panels.
   const TILE_LIGHT =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E" +
-    "%3Crect width='60' height='60' fill='%23cfe0f5'/%3E" +
-    "%3Ccircle cx='12' cy='14' r='3' fill='white'/%3E" +
-    "%3Ccircle cx='42' cy='9' r='2' fill='white'/%3E" +
-    "%3Ccircle cx='51' cy='34' r='3' fill='%23eaf3ff'/%3E" +
-    "%3Ccircle cx='23' cy='45' r='2' fill='white'/%3E" +
-    "%3Ccircle cx='34' cy='55' r='2.5' fill='%23eaf3ff'/%3E%3C/svg%3E";
+    "%3Crect width='60' height='60' fill='%23b8d0ef'/%3E" +
+    "%3Ccircle cx='12' cy='14' r='3.5' fill='%237ba0d6'/%3E" +
+    "%3Ccircle cx='42' cy='9' r='2.5' fill='white'/%3E" +
+    "%3Ccircle cx='51' cy='34' r='3.5' fill='%237ba0d6'/%3E" +
+    "%3Ccircle cx='23' cy='45' r='2.5' fill='white'/%3E" +
+    "%3Ccircle cx='34' cy='55' r='3' fill='%237ba0d6'/%3E" +
+    "%3Ccircle cx='5' cy='40' r='2' fill='white'/%3E" +
+    "%3Ccircle cx='57' cy='55' r='2' fill='%237ba0d6'/%3E%3C/svg%3E";
 
   const COLOR_DEPTHS = [16, 256, 4096, 16777216];
 
@@ -68,7 +70,7 @@
     if (c.tiledBg) {
       // Light wallpaper only on the page backdrop — do NOT force a text color,
       // so each element keeps its own (usually dark, readable) contrast.
-      css.push(`html,body{background-image:url("${TILE_LIGHT}")!important;background-color:#cfe0f5!important;background-attachment:fixed!important}`);
+      css.push(`html,body{background-image:url("${TILE_LIGHT}")!important;background-color:#b8d0ef!important;background-attachment:fixed!important}`);
     }
     if (c.beveled) {
       css.push("button,input[type=button],input[type=submit],input[type=reset],select{border:2px outset #c0c0c0!important;border-radius:0!important;background:#c0c0c0!important;color:#000!important;box-shadow:none!important;padding:2px 8px!important;text-shadow:none!important}");

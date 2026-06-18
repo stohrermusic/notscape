@@ -90,6 +90,8 @@ const DEFAULT_CONFIG = {
   statusScroller: false,
   // appearance
   darkMode: false,
+  brightness: 42,   // 0=darker … 100=brighter (50≈neutral)
+  contrast: 55,     // 0=softer … 100=punchier (text vs background)
   screensaver: false,
   // calmer web
   calmMode: true,   // hide engagement bait (metrics, rails, badges) + de-shout headlines
@@ -110,7 +112,8 @@ const DEFAULT_CONFIG = {
   spoofUA: false,
   // flourishes
   randomFlourishes: true,
-  flourishLevel: 'moderate' // light | moderate | heavy
+  flourishLevel: 'moderate', // light | moderate | heavy
+  flourishTheme: 'subdued'   // all | subdued | dark
 };
 
 let config = Object.assign({}, DEFAULT_CONFIG);
@@ -345,10 +348,15 @@ async function applyPageCosmetics() {
   if (config.hideComments) css += COMMENT_CSS + '\n';
   if (config.killCookieBanners) css += COOKIE_CSS + '\n';
   if (config.calmMode) css += CALM_CSS + '\n';
-  // combine html filters: grayscale + smart-invert dark mode
+  // combine html filters: grayscale + (softened) dark invert + brightness + contrast
   const filters = [];
   if (config.grayscale) filters.push('grayscale(1)');
-  if (config.darkMode) filters.push('invert(1) hue-rotate(180deg)');
+  // softer dark mode: lift the pure black to dark-gray, ease the contrast
+  if (config.darkMode) filters.push('invert(1) hue-rotate(180deg) brightness(1.12) contrast(0.92)');
+  const b = (0.6 + (config.brightness / 100) * 0.8).toFixed(2);   // 0.6 .. 1.4 (50 ≈ 1.0)
+  const c = (0.8 + (config.contrast / 100) * 0.6).toFixed(2);     // 0.8 .. 1.4
+  if (b !== '1.00') filters.push('brightness(' + b + ')');
+  if (c !== '1.00') filters.push('contrast(' + c + ')');
   if (filters.length) css += 'html{filter:' + filters.join(' ') + '!important}\n';
   if (config.darkMode) {
     // re-invert media so photos/videos look normal under the dark invert
@@ -1235,6 +1243,7 @@ function openPrefs() {
   document.getElementById('lazyImages').checked = !!config.lazyImages;
   document.getElementById('allowAutoplay').checked = !!config.allowAutoplay;
   document.getElementById('pref-flourishLevel').value = config.flourishLevel || 'moderate';
+  document.getElementById('pref-flourishTheme').value = config.flourishTheme || 'subdued';
   document.getElementById('stripParams').checked = !!config.stripParams;
   document.getElementById('clearOnExit').checked = !!config.clearOnExit;
   document.getElementById('pref-search').value = config.searchEngine || 'marginalia';
@@ -1284,6 +1293,8 @@ function openPrefs() {
   if (li) li.addEventListener('change', () => { config.lazyImages = li.checked; saveConfig(); view.reload(); });
   const fl = document.getElementById('pref-flourishLevel');
   if (fl) fl.addEventListener('change', () => { config.flourishLevel = fl.value; saveConfig(); });
+  const ft = document.getElementById('pref-flourishTheme');
+  if (ft) ft.addEventListener('change', () => { config.flourishTheme = ft.value; saveConfig(); });
 })();
 
 // --- Flourishes (per current site) ---
@@ -1320,24 +1331,27 @@ function toggleFlourish(host, key, on) {
 function randomFlourishesFor() {
   // Balanced roll across categories so a site looks intentional, not clobbered:
   // ~1 overlay, at most 1 title-text effect, maybe a page-style/cursor, 0-2 badges.
-  const C = window.NotscapeFlourishes.cats;
+  const lib = window.NotscapeFlourishes;
+  const theme = config.flourishTheme || 'subdued';
+  const T = lib.themes[theme]; // null for 'all'
+  const cat = (name) => (T && T[name]) ? T[name] : lib.cats[name];
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const lvl = config.flourishLevel || 'moderate';
   const P = lvl === 'light' ? { overlay: 0.35, title: 0.3, page: 0.15, cursor: 0.15, decoMax: 1, constr: 0.1 }
     : lvl === 'heavy' ? { overlay: 0.85, title: 0.8, page: 0.55, cursor: 0.5, decoMax: 3, constr: 0.5 }
     : { overlay: 0.6, title: 0.55, page: 0.3, cursor: 0.3, decoMax: 2, constr: 0.34 };
   const chosen = [];
-  if (Math.random() < P.overlay) chosen.push(pick(C.overlay));
-  if (Math.random() < P.title) chosen.push(pick(C.title));
-  if (Math.random() < P.page) chosen.push(pick(C.page));
-  if (Math.random() < P.cursor) chosen.push(pick(C.cursor));
-  const decoPool = C.decoration.slice();
+  if (Math.random() < P.overlay) chosen.push(pick(cat('overlay')));
+  if (Math.random() < P.title) chosen.push(pick(cat('title')));
+  if (Math.random() < P.page) chosen.push(pick(cat('page')));
+  if (Math.random() < P.cursor) chosen.push(pick(cat('cursor')));
+  const decoPool = cat('decoration').slice();
   const decoCount = Math.floor(Math.random() * (P.decoMax + 1));
   for (let i = 0; i < decoCount && decoPool.length; i++) {
     chosen.push(decoPool.splice(Math.floor(Math.random() * decoPool.length), 1)[0]);
   }
-  if (Math.random() < P.constr) chosen.push('construction'); // loud — keep it rare
-  if (!chosen.length) chosen.push(pick(C.overlay)); // never empty
+  if (theme !== 'dark' && Math.random() < P.constr) chosen.push('construction'); // loud — rare, not in dark
+  if (!chosen.length) chosen.push(pick(cat('overlay'))); // never empty
   return chosen;
 }
 function reshuffleFlourishes() {
@@ -1395,6 +1409,13 @@ function syncModsPanel() {
     const lab = document.getElementById('v-geoCities');
     if (lab) lab.textContent = config.geoCities || 0;
   }
+  ['brightness', 'contrast'].forEach((k) => {
+    const el = document.getElementById(k);
+    if (!el) return;
+    el.value = config[k];
+    const lab = document.getElementById('v-' + k);
+    if (lab) lab.textContent = config[k];
+  });
 }
 function updateSliderLabel(k) {
   const out = document.getElementById('v-' + k);
@@ -1459,6 +1480,19 @@ SLIDERS.forEach((k) => {
     config[k] = parseInt(el.value, 10);
     updateSliderLabel(k);
     applyTransform();
+  });
+  el.addEventListener('change', saveConfig);
+});
+
+// brightness & contrast — page-wide filter tint (live, also dims the flourishes)
+['brightness', 'contrast'].forEach((k) => {
+  const el = document.getElementById(k);
+  if (!el) return;
+  el.addEventListener('input', () => {
+    config[k] = parseInt(el.value, 10);
+    const lab = document.getElementById('v-' + k);
+    if (lab) lab.textContent = config[k];
+    applyPageCosmetics();
   });
   el.addEventListener('change', saveConfig);
 });

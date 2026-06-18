@@ -128,6 +128,39 @@ html, body {
 .dir-title:hover { color: #ff0000; }
 .dir-desc { color: #404040; }
 
+/* SCREENSAVER (flying toasters homage) */
+#screensaver {
+  position: fixed; inset: 0; z-index: 200; background: #000; overflow: hidden; cursor: none;
+}
+#screensaver[hidden] { display: none; }
+.ss-flyer { position: absolute; left: 0; will-change: transform; animation: ss-drift linear infinite; }
+@keyframes ss-drift {
+  from { transform: translate(112vw, -25vh); }
+  to   { transform: translate(-30vw, 120vh); }
+}
+.ss-toaster { width: 64px; height: 44px; position: relative; }
+.ss-toaster .body { position: absolute; inset: 0; background: linear-gradient(180deg,#fff,#bcc4cc 42%,#7d868f);
+  border: 2px solid #555d66; border-radius: 9px 9px 11px 11px; }
+.ss-toaster .slot { position: absolute; top: 6px; left: 11px; right: 11px; height: 7px; background: #1a1a1a;
+  border-radius: 3px; box-shadow: inset 0 1px 2px #000; }
+.ss-toaster .lever { position: absolute; right: -4px; top: 17px; width: 6px; height: 13px; background: #666; border-radius: 2px; }
+.ss-toaster .wing { position: absolute; top: 6px; width: 26px; height: 22px;
+  background: linear-gradient(#fff,#e2e9ef); border: 1px solid #9aa3ac; border-radius: 70% 70% 6px 6px;
+  transform-origin: bottom center; }
+.ss-toaster .wing.l { left: -23px; animation: ss-flap-l .34s ease-in-out infinite; }
+.ss-toaster .wing.r { right: -23px; animation: ss-flap-r .34s ease-in-out infinite; }
+@keyframes ss-flap-l { 0%,100% { transform: rotate(22deg) scaleY(1); } 50% { transform: rotate(-28deg) scaleY(.8); } }
+@keyframes ss-flap-r { 0%,100% { transform: rotate(-22deg) scaleY(1); } 50% { transform: rotate(28deg) scaleY(.8); } }
+.ss-toast { width: 40px; height: 38px; background: linear-gradient(#e8b46a,#c8843a);
+  border: 2px solid #8a5a22; border-radius: 18px 18px 6px 6px; box-shadow: inset 0 -6px 0 rgba(0,0,0,.12); }
+.ss-label { position: absolute; bottom: 22px; left: 0; right: 0; text-align: center; color: #39406b;
+  font-family: Georgia, serif; font-style: italic; font-size: 22px; opacity: .55; }
+
+/* TIME TRAVEL */
+.tt-years { display: flex; flex-wrap: wrap; gap: 6px; }
+.tt-years button { min-width: 76px; padding: 6px 10px; font-family: inherit; font-size: 13px; }
+#tt-url { color: #000080; word-break: break-all; }
+
 /* ============================ DARK MODE (chrome) ============================ */
 html.dark body, html.dark #app { background: #1e1e1e; color: #e6e6e6; }
 

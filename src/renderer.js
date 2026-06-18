@@ -90,6 +90,7 @@ const DEFAULT_CONFIG = {
   statusScroller: false,
   // appearance
   darkMode: false,
+  screensaver: false,
   // calmer web
   calmMode: true,   // hide engagement bait (metrics, rails, badges) + de-shout headlines
   forceReadable: true, // fix low-contrast text so it stays legible
@@ -173,6 +174,7 @@ function showHome() {
   if (window.NotscapeHome) window.NotscapeHome.onShow();
   applyExtras();
   renderSiteOfDay();
+  resetIdle();
   updateNavButtons();
 }
 function hideHome() {
@@ -612,6 +614,7 @@ function doEdit(cmd) {
 }
 const MENUS = {
   file: () => [
+    { label: 'Time Travel…', action: openTimeTravel },
     { label: 'Web Directory…', action: openDirectory },
     { label: 'Webring…', action: openWebring },
     { label: 'New Window', action: () => window.notscape.newWindow() },
@@ -1130,6 +1133,70 @@ async function toggleReader() {
 }
 document.getElementById('reader-btn').addEventListener('click', toggleReader);
 
+// 🕰 Time Travel — view the current page via the Wayback Machine
+function timeTravel(year) {
+  if (isHome(currentURL) || !/^https?:/.test(currentURL)) return;
+  let url = currentURL;
+  // if we're already viewing an archived page, time-travel the original
+  const m = url.match(/^https?:\/\/web\.archive\.org\/web\/[^/]+\/(https?:\/\/.+)$/);
+  if (m) url = m[1];
+  closeOverlay('timetravel-overlay');
+  nslog('WAYBACK ' + year + ' ' + url);
+  navigate('https://web.archive.org/web/' + year + '/' + url);
+}
+function openTimeTravel() {
+  if (isHome(currentURL) || !/^https?:/.test(currentURL)) {
+    statusText.textContent = 'Open a website first, then time-travel it.';
+    return;
+  }
+  document.getElementById('tt-url').textContent = hostOf(currentURL);
+  openOverlay('timetravel-overlay');
+}
+document.getElementById('wayback-btn').addEventListener('click', openTimeTravel);
+document.querySelector('.tt-years').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-year]');
+  if (b) timeTravel(b.dataset.year);
+});
+
+// 🍞 After Dark-style screensaver — idle on the start page
+function startScreensaver() {
+  const ss = document.getElementById('screensaver');
+  ss.innerHTML = '';
+  for (let i = 0; i < 11; i++) {
+    const f = document.createElement('div');
+    f.className = 'ss-flyer';
+    const dur = 9 + Math.random() * 9;
+    f.style.top = (Math.random() * 80 - 10) + 'vh';
+    f.style.animationDuration = dur.toFixed(1) + 's';
+    f.style.animationDelay = (-Math.random() * dur).toFixed(1) + 's';
+    const scale = (0.7 + Math.random() * 0.9).toFixed(2);
+    const inner = (i % 4 === 3)
+      ? '<div class="ss-toast"></div>'
+      : '<div class="ss-toaster"><div class="body"></div><div class="slot"></div><div class="lever"></div><div class="wing l"></div><div class="wing r"></div></div>';
+    f.innerHTML = '<div style="transform:scale(' + scale + ')">' + inner + '</div>';
+    ss.appendChild(f);
+  }
+  const label = document.createElement('div');
+  label.className = 'ss-label'; label.textContent = 'Notscape';
+  ss.appendChild(label);
+  ss.hidden = false;
+}
+function stopScreensaver() {
+  const ss = document.getElementById('screensaver');
+  if (ss) { ss.hidden = true; ss.innerHTML = ''; }
+}
+let idleTimer = null;
+function resetIdle() {
+  if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+  const ss = document.getElementById('screensaver');
+  if (ss && !ss.hidden) stopScreensaver();
+  if (config.screensaver && currentURL === HOME) {
+    idleTimer = setTimeout(() => { if (config.screensaver && currentURL === HOME) startScreensaver(); }, 75000);
+  }
+}
+['mousemove', 'mousedown', 'keydown', 'wheel', 'touchstart'].forEach((ev) =>
+  document.addEventListener(ev, resetIdle, { passive: true }));
+
 // 📡 Subscribe — detect a page's RSS feed and add it to the start page
 let detectedFeed = null;
 async function detectFeed() {
@@ -1287,7 +1354,7 @@ function reshuffleFlourishes() {
 const overlay = document.getElementById('mods-overlay');
 const CHECKS = ['siteSkins', 'oldFonts', 'flatten', 'beveled', 'retroLinks', 'grayBg', 'tiledBg',
   'comicSans', 'retroMedia', 'killSticky', 'marquee', 'blink', 'construction', 'hitCounter', 'webring', 'dither',
-  'darkMode', 'calmMode', 'forceReadable', 'grayscale', 'scrollBreather', 'soundWelcome', 'soundMail', 'chiptune', 'uiSounds', 'statusScroller', 'spoofUA'];
+  'darkMode', 'calmMode', 'forceReadable', 'grayscale', 'scrollBreather', 'screensaver', 'soundWelcome', 'soundMail', 'chiptune', 'uiSounds', 'statusScroller', 'spoofUA'];
 const SLIDERS = ['age', 'pixelation', 'colorDepth'];
 
 function openMods() { syncModsPanel(); overlay.hidden = false; }
@@ -1347,6 +1414,7 @@ CHECKS.forEach((k) => {
     else if (k === 'safeMode') { window.notscape.setSafeMode(el.checked); view.reload(); }
     else if (k === 'chiptune' || k === 'uiSounds' || k === 'statusScroller') applyExtras();
     else if (k === 'darkMode') { applyDarkChrome(); applyPageCosmetics(); }
+    else if (k === 'screensaver') resetIdle();
     else if (k === 'calmMode' || k === 'grayscale') applyPageCosmetics();
     else applyTransform();
   });

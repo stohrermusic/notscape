@@ -42,6 +42,7 @@
       <button id="flourishes-btn" class="tbtn star">✨ Flourishes</button>
       <button id="stumble-btn" class="tbtn star" title="Stumble to a random indie site">🎲 Stumble</button>
       <button id="reader-btn" class="tbtn" title="Reader Mode — strip the page to clean text">📖 Reader</button>
+      <button id="wayback-btn" class="tbtn star" title="View this page in a past year (Wayback Machine)">🕰 Wayback</button>
       <div class="spacer"></div>
       <div id="throbber" title="Notscape">
         <div class="sky"></div>
@@ -261,6 +262,7 @@
           <label><input type="checkbox" id="chiptune" /> Chiptune music on the start page</label>
           <label><input type="checkbox" id="uiSounds" /> Click &amp; error sounds</label>
           <label><input type="checkbox" id="statusScroller" /> Scrolling status-bar message</label>
+          <label><input type="checkbox" id="screensaver" /> 🍞 Flying-toasters screensaver (when the start page sits idle)</label>
           <p class="mp-hint">Drop <code>welcome.wav</code> / <code>youve-got-mail.wav</code> in the
             <code>assets/</code> folder for the real clips; otherwise a text-to-speech voice fills in.</p>
         </fieldset>
@@ -381,6 +383,29 @@
     </div>
   </div>
 
+  <!-- TIME TRAVEL (Wayback Machine) -->
+  <div id="timetravel-overlay" class="ns-overlay" hidden>
+    <div class="ns-panel">
+      <div class="mp-title"><span>🕰 Time Travel</span><button class="mp-close" data-close="timetravel-overlay">×</button></div>
+      <div class="mp-body">
+        <p class="mp-hint">View <b id="tt-url"></b> as it looked, via the Internet Archive Wayback Machine.
+          (Not every site has snapshots for every year.)</p>
+        <div class="presets tt-years">
+          <button data-year="1996">1996</button>
+          <button data-year="1998">1998</button>
+          <button data-year="2000">2000</button>
+          <button data-year="2003">2003</button>
+          <button data-year="2006">2006</button>
+          <button data-year="2009">2009</button>
+          <button data-year="2012">2012</button>
+          <button data-year="2016">2016</button>
+          <button data-year="2020">2020</button>
+          <button data-year="29991231">Latest archived</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- WEB DIRECTORY (Go menu / start page) -->
   <div id="directory-overlay" class="ns-overlay" hidden>
     <div class="ns-panel">
@@ -421,6 +446,9 @@
       </div>
     </div>
   </div>
+
+  <!-- AFTER DARK-style screensaver (idle on the start page) -->
+  <div id="screensaver" hidden></div>
 
   <script src="inject/engine.js"></script>
   <script src="inject/styles.js"></script>

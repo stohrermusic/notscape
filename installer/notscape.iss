@@ -3,7 +3,7 @@
 ; Then compile this:        iscc installer\notscape.iss
 
 #define MyAppName "Notscape"
-#define MyAppVersion "0.6.0"
+#define MyAppVersion "0.7.0"
 #define MyAppPublisher "Matt Stohrer"
 #define MyAppURL "https://github.com/stohrermusic/notscape"
 #define MyAppExeName "Notscape.exe"

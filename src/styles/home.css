@@ -83,6 +83,11 @@
 #hs-feedlist .hs-del:hover { background: #aa0000; color: #fff; }
 .hs-today { font-size: 12px; }
 
+#hs-sotd { font-size: 12px; margin-bottom: 10px; }
+#hs-sotd .sotd-title { color: #0000ee; text-decoration: underline; cursor: default; font-weight: bold; font-size: 13px; }
+#hs-sotd .sotd-title:hover { color: #ff0000; }
+#hs-sotd .sotd-desc { color: #404040; margin-top: 2px; }
+
 #hs-bookmarks { list-style: none; margin: 0 0 12px; padding: 0; }
 #hs-bookmarks li {
   display: flex; align-items: center; justify-content: space-between;

@@ -40,6 +40,8 @@
       <button id="home" class="tbtn">Home</button>
       <button id="mods" class="tbtn star">★ Mods</button>
       <button id="flourishes-btn" class="tbtn star">✨ Flourishes</button>
+      <button id="stumble-btn" class="tbtn star" title="Stumble to a random indie site">🎲 Stumble</button>
+      <button id="reader-btn" class="tbtn" title="Reader Mode — strip the page to clean text">📖 Reader</button>
       <div class="spacer"></div>
       <div id="throbber" title="Notscape">
         <div class="sky"></div>
@@ -53,6 +55,7 @@
       <span class="loc-label">Location:</span>
       <input id="urlbar" type="text" spellcheck="false"
              placeholder="Type a URL or search the old web..." />
+      <button id="subscribe-btn" class="tbtn" hidden title="Add this site's RSS feed to your start page">📡 Subscribe</button>
       <button id="go" class="tbtn">Go</button>
     </div>
 
@@ -126,6 +129,8 @@
               <ul id="hs-feedlist"></ul>
               <div class="hs-bar">⭐ My Bookmarks</div>
               <ul id="hs-bookmarks"><li class="hs-bm-empty">No bookmarks yet &mdash; visit a page and click <b>➕ Add</b>.</li></ul>
+              <div class="hs-bar">🌟 Site of the Day</div>
+              <div id="hs-sotd"><i>Loading&hellip;</i></div>
               <div class="hs-bar">🌦️ Today</div>
               <p class="hs-today">
                 <b>Date:</b> <span id="hs-clock">&hellip;</span><br />
@@ -141,6 +146,7 @@
               <a href="#" data-ring="random">Random</a> |
               <a href="#" data-ring="next">Next &raquo;</a> ]
             &nbsp; <a href="#" data-ring="list">See all &raquo;</a>
+            &nbsp;|&nbsp; <a href="#" data-dir-open="1">📁 Web Directory</a>
           </div>
           <div class="hs-footer">🚧 Best viewed in Notscape Navigator at 800&times;600 &middot; populate it with your own RSS feeds! 🚧</div>
         </div>
@@ -213,6 +219,7 @@
 
         <fieldset>
           <legend>Style</legend>
+          <label><input type="checkbox" id="darkMode" /> 🌙 Dark Mode (dark UI + inverted pages)</label>
           <label><input type="checkbox" id="oldFonts" /> Old fonts (Times / Courier, no smoothing)</label>
           <label><input type="checkbox" id="flatten" /> Flatten corners &amp; kill shadows/gradients</label>
           <label><input type="checkbox" id="beveled" /> Beveled 3D boxes &amp; buttons</label>
@@ -228,6 +235,13 @@
           <label><input type="checkbox" id="killSticky" /> Un-stick fixed/sticky headers</label>
           <label><input type="checkbox" id="marquee" /> Marquee the headings</label>
           <label><input type="checkbox" id="blink" /> &lt;blink&gt; emphasis text</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Calmer Web</legend>
+          <label><input type="checkbox" id="calmMode" /> Calm Mode &mdash; hide engagement bait (recommendations, view/like counts, badges) &amp; de-shout ALL-CAPS headlines</label>
+          <label><input type="checkbox" id="grayscale" /> Grayscale everything (less dopamine, more focus)</label>
+          <label><input type="checkbox" id="scrollBreather" /> Scroll breather &mdash; a gentle "take a breath" after long scrolling</label>
         </fieldset>
 
         <fieldset>
@@ -271,6 +285,19 @@
           </label>
           <p class="mp-hint">Used on the sign-on dialog and your start-page greeting.</p>
         </fieldset>
+
+        <fieldset>
+          <legend>Search</legend>
+          <label class="pref-row">Default search engine:
+            <select id="pref-search">
+              <option value="marginalia">Marginalia (small web)</option>
+              <option value="wiby">Wiby (old web)</option>
+              <option value="ddg">DuckDuckGo</option>
+              <option value="google">Google</option>
+            </select>
+          </label>
+          <p class="mp-hint">Small-web engines surface human, text-first pages instead of AI slop.</p>
+        </fieldset>
         <fieldset>
           <legend>Flourishes</legend>
           <label><input type="checkbox" id="prefRandomFlourishes" /> Auto-add random 90s flourishes to each site
@@ -286,6 +313,8 @@
         </fieldset>
         <fieldset>
           <legend>Privacy &amp; Safety</legend>
+          <label><input type="checkbox" id="stripParams" /> Strip tracking parameters from links (utm, fbclid, gclid&hellip;)</label>
+          <label><input type="checkbox" id="clearOnExit" /> Ephemeral mode &mdash; wipe cookies &amp; cache between sessions. <i>Applies next launch.</i></label>
           <label><input type="checkbox" id="safeMode" /> Safe Mode &mdash; keep sites' security headers
             (CSP / X-Frame). Safer for logins, but some skins won't apply. <i>Reloads.</i></label>
           <p class="mp-hint">Notscape does <b>not</b> store passwords, and the sign-on dialog is fake.
@@ -341,6 +370,17 @@
     </div>
   </div>
 
+  <!-- WEB DIRECTORY (Go menu / start page) -->
+  <div id="directory-overlay" class="ns-overlay" hidden>
+    <div class="ns-panel">
+      <div class="mp-title"><span>📁 Notscape Web Directory</span><button class="mp-close" data-close="directory-overlay">×</button></div>
+      <div class="mp-body">
+        <p class="mp-hint">A hand-curated directory of the good web &mdash; personal, non-corporate, interesting. Click to visit.</p>
+        <div id="directory-list"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- WEBRING DIRECTORY (Go menu) -->
   <div id="webring-overlay" class="ns-overlay" hidden>
     <div class="ns-panel">
@@ -350,6 +390,12 @@
           The webring footer's <b>Prev / Random / Next</b> cycle through these too.</p>
         <div class="presets" style="margin-bottom:6px"><button id="webring-random">🎲 Visit a random site</button></div>
         <ul id="webring-list"></ul>
+        <p class="mp-hint" style="margin-top:8px"><b>Add your own</b> &mdash; grow your personal ring:</p>
+        <form id="webring-addform" class="hs-add">
+          <input type="text" id="webring-addurl" placeholder="https://your-favorite-site.com" autocomplete="off" />
+          <input type="text" id="webring-addtitle" placeholder="Title (optional)" autocomplete="off" style="flex:0 0 130px" />
+          <button type="submit">Add</button>
+        </form>
       </div>
     </div>
   </div>

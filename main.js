@@ -10,6 +10,12 @@ const fs = require('fs');
 // Let the modem screech + any page audio play without a user gesture.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
+// --- debug log (so we can watch a browsing session and catch errors) ---
+const LOG_PATH = path.join(__dirname, 'notscape-debug.log');
+function appendLog(line) {
+  try { fs.appendFileSync(LOG_PATH, '[' + new Date().toISOString().slice(11, 23) + '] ' + line + '\n'); } catch (_) {}
+}
+
 let splashWindow = null;
 let mainWindow = null;
 
@@ -52,6 +58,24 @@ function isAdHost(url) {
   let host;
   try { host = new URL(url).hostname.toLowerCase(); } catch (_) { return false; }
   return AD_HOSTS.some((d) => host === d || host.endsWith('.' + d));
+}
+
+// Silently strip tracking parameters from URLs (default on)
+let stripParams = true;
+const TRACK_PARAMS = [
+  'fbclid', 'gclid', 'gclsrc', 'dclid', 'msclkid', 'mc_eid', 'mc_cid', 'igshid', 'twclid',
+  'yclid', 'wickedid', 'oly_anon_id', 'oly_enc_id', 'vero_id', '_hsenc', '_hsmi',
+  'ref_src', 'ref_url', 'spm', 's_cid', 'cmpid', 'icid'
+];
+function cleanTrackingUrl(rawUrl) {
+  try {
+    const u = new URL(rawUrl);
+    let changed = false;
+    for (const key of [...u.searchParams.keys()]) {
+      if (TRACK_PARAMS.includes(key) || /^utm_/i.test(key)) { u.searchParams.delete(key); changed = true; }
+    }
+    return changed ? u.toString() : null;
+  } catch (_) { return null; }
 }
 
 // "No social media" — block navigation to these (default on)
@@ -184,8 +208,12 @@ function setupNetwork() {
   const ses = session.defaultSession;
 
   ses.webRequest.onBeforeRequest((details, callback) => {
-    if (blockAds && isAdHost(details.url)) callback({ cancel: true });
-    else callback({});
+    if (blockAds && isAdHost(details.url)) { callback({ cancel: true }); return; }
+    if (stripParams && (details.resourceType === 'mainFrame' || details.resourceType === 'subFrame')) {
+      const cleaned = cleanTrackingUrl(details.url);
+      if (cleaned) { callback({ redirectURL: cleaned }); return; }
+    }
+    callback({});
   });
 
   ses.webRequest.onHeadersReceived((details, callback) => {
@@ -230,6 +258,11 @@ app.on('web-contents-created', (event, contents) => {
         contents.loadURL(socialBlockPage(h));
       }
     });
+    // debug log: surface page-level failures
+    contents.on('did-fail-load', (e, code, desc, url) => { if (code !== -3) appendLog('FAIL ' + code + ' ' + desc + ' :: ' + url); });
+    contents.on('render-process-gone', (e, d) => appendLog('RENDER GONE ' + JSON.stringify(d)));
+    contents.on('preload-error', (e, file, err) => appendLog('PRELOAD ERR ' + ((err && err.message) || err)));
+    contents.on('unresponsive', () => appendLog('PAGE UNRESPONSIVE'));
   }
 });
 
@@ -250,6 +283,7 @@ ipcMain.on('splash-connected', () => {
 });
 
 ipcMain.on('window:new', () => createMain());
+ipcMain.on('log:write', (_e, line) => appendLog(String(line).slice(0, 4000)));
 
 ipcMain.handle('bookmarks:get', () => readJson('bookmarks.json', DEFAULT_BOOKMARKS));
 ipcMain.handle('bookmarks:set', (_e, data) => writeJson('bookmarks.json', data));
@@ -313,6 +347,7 @@ ipcMain.handle('rss:fetch', async (_e, url) => {
 ipcMain.on('net:safe-mode', (_e, on) => { stripHeaders = !on; });
 ipcMain.on('net:block-ads', (_e, on) => { blockAds = !!on; });
 ipcMain.on('net:block-social', (_e, on) => { blockSocial = !!on; });
+ipcMain.on('net:strip-params', (_e, on) => { stripParams = !!on; });
 ipcMain.handle('privacy:clear', async () => {
   try {
     await session.defaultSession.clearStorageData();
@@ -325,13 +360,19 @@ ipcMain.handle('privacy:clear', async () => {
 });
 
 // ---------------------------------------------------------------------------
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  appendLog('========== session start ==========');
   // sync network flags from the renderer's last-saved config
   const cfg = readJson('config.json', null);
   if (cfg) {
     if (cfg.safeMode) stripHeaders = false;
     if (cfg.blockAds === false) blockAds = false;
     if (cfg.blockSocial === false) blockSocial = false;
+    if (cfg.stripParams === false) stripParams = false;
+    // ephemeral session: wipe last session's cookies/cache on launch
+    if (cfg.clearOnExit) {
+      try { await session.defaultSession.clearStorageData(); await session.defaultSession.clearCache(); } catch (_) {}
+    }
   }
   setupNetwork();
   createSplash();

@@ -184,7 +184,8 @@
     $('hs-search').addEventListener('submit', (e) => {
       e.preventDefault();
       const q = $('hs-q').value.trim();
-      if (q) openUrl('https://lite.duckduckgo.com/lite/?q=' + encodeURIComponent(q));
+      if (!q) return;
+      openUrl(window.notscapeSearchUrl ? window.notscapeSearchUrl(q) : 'https://lite.duckduckgo.com/lite/?q=' + encodeURIComponent(q));
     });
 
     $('hs-addform').addEventListener('submit', async (e) => {

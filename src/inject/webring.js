@@ -28,4 +28,47 @@
     { url: 'https://www.metafilter.com/', title: 'MetaFilter', desc: 'A community weblog of the best of the web since 1999.' },
     { url: 'https://1mb.club/', title: '1MB Club', desc: 'Websites that weigh less than one megabyte.' }
   ];
+
+  // A browsable, hand-curated topic directory (Yahoo!-/href.cool-style)
+  window.NotscapeDirectory = [
+    { cat: '🔍 Search & Discover', sites: [
+      { title: 'Wiby', url: 'https://wiby.me/', desc: 'Search the old, personal, hand-made web.' },
+      { title: 'Marginalia', url: 'https://search.marginalia.nu/', desc: 'Indie search for text-first, non-commercial pages.' },
+      { title: 'href.cool', url: 'https://href.cool/', desc: 'A hand-crafted directory of interesting links.' },
+      { title: 'ooh.directory', url: 'https://ooh.directory/', desc: 'A growing directory of personal blogs.' }
+    ] },
+    { cat: '📚 Read & Learn', sites: [
+      { title: 'Internet Archive', url: 'https://archive.org/', desc: 'Free books, films, music & the Wayback Machine.' },
+      { title: 'Project Gutenberg', url: 'https://www.gutenberg.org/', desc: '70,000+ free public-domain ebooks.' },
+      { title: 'Standard Ebooks', url: 'https://standardebooks.org/', desc: 'Beautifully made free ebooks.' },
+      { title: 'Public Domain Review', url: 'https://publicdomainreview.org/', desc: 'Curiosities from the public domain.' },
+      { title: 'Open Culture', url: 'https://www.openculture.com/', desc: 'Free courses, films & cultural media.' }
+    ] },
+    { cat: '🛠 Make & Tinker', sites: [
+      { title: 'Hackaday', url: 'https://hackaday.com/', desc: 'Hardware hacks and DIY electronics.' },
+      { title: 'Adafruit', url: 'https://blog.adafruit.com/', desc: 'Maker projects and open hardware.' },
+      { title: '3DPrint.com', url: 'https://3dprint.com/', desc: '3D-printing news and how-tos.' },
+      { title: 'Hundred Rabbits', url: 'https://100r.co/', desc: 'Two artists building tools off-grid.' },
+      { title: 'Low-Tech Magazine', url: 'https://solar.lowtechmagazine.com/', desc: 'A solar-powered, low-tech site.' }
+    ] },
+    { cat: '✍️ Personal Sites', sites: [
+      { title: 'kottke.org', url: 'https://kottke.org/', desc: "One of the web's oldest personal blogs." },
+      { title: 'Julia Evans', url: 'https://jvns.ca/', desc: 'Friendly programming zines & comics.' },
+      { title: 'Bartosz Ciechanowski', url: 'https://ciechanow.ski/', desc: 'Interactive explanations of how things work.' },
+      { title: 'MetaFilter', url: 'https://www.metafilter.com/', desc: 'Community weblog of the best of the web.' }
+    ] },
+    { cat: '🎮 Play & Wander', sites: [
+      { title: 'The Useless Web', url: 'https://theuselessweb.com/', desc: 'One button → a pointless website.' },
+      { title: 'Radio Garden', url: 'https://radio.garden/', desc: 'Spin the globe, hear live radio anywhere.' },
+      { title: 'WindowSwap', url: 'https://www.window-swap.com/', desc: "Look out someone else's window." },
+      { title: 'Lichess', url: 'https://lichess.org/', desc: 'Free, ad-free, open-source chess.' },
+      { title: 'xkcd', url: 'https://xkcd.com/', desc: 'Romance, sarcasm, math & language.' }
+    ] },
+    { cat: '🌐 The Indie Web', sites: [
+      { title: 'Neocities', url: 'https://neocities.org/', desc: 'Free personal websites — GeoCities reborn.' },
+      { title: 'IndieWeb', url: 'https://indieweb.org/', desc: 'Own your data; the people-first web.' },
+      { title: '1MB Club', url: 'https://1mb.club/', desc: 'Sites under one megabyte.' },
+      { title: 'now now now', url: 'https://nownownow.com/', desc: "People's /now pages." }
+    ] }
+  ];
 })();

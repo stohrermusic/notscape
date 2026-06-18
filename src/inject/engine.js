@@ -42,6 +42,19 @@ function notscapeEngine() {
     }
   }
 
+  // ---- unlock scroll (defeat leftover scroll-locks from modals/consent walls) ----
+  function unlockScroll() {
+    var els = [document.documentElement, document.body];
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (!el) continue;
+      var cs;
+      try { cs = getComputedStyle(el); } catch (e) { continue; }
+      if (cs.overflow === 'hidden' || cs.overflowY === 'hidden') el.style.setProperty('overflow-y', 'auto', 'important');
+      if (cs.position === 'fixed') el.style.setProperty('position', 'static', 'important');
+    }
+  }
+
   // ---- blink emphasis ----
   function blink(on) {
     if (on) each('strong,b,em,mark', function (el) { el.classList.add('ns-blink'); });
@@ -215,6 +228,45 @@ function notscapeEngine() {
     });
   }
 
+  // Calm headlines — de-shout ALL-CAPS headings (CSS lowercases; ::first-letter re-caps)
+  function calmHeadlines(on) {
+    if (!on) return;
+    each('h1,h2,h3,h4', function (h) {
+      if (h.getAttribute('data-ns-calm')) return;
+      var t = (h.textContent || '').trim();
+      var letters = t.replace(/[^A-Za-z]/g, '');
+      if (letters.length < 6) return;
+      var upper = t.replace(/[^A-Z]/g, '').length;
+      if (upper / letters.length > 0.7) h.setAttribute('data-ns-calm', '1');
+    });
+  }
+
+  // Scroll breather — a gentle "take a breath" after a long continuous scroll
+  var breatherOn = false, scrollAccum = 0, lastY = 0;
+  function onBreatherScroll() {
+    var y = window.scrollY || window.pageYOffset || 0;
+    scrollAccum += Math.abs(y - lastY); lastY = y;
+    if (scrollAccum > 9000 && !document.getElementById('ns-breather')) showBreather();
+  }
+  function showBreather() {
+    scrollAccum = 0;
+    if (!document.body) return;
+    var b = document.createElement('div');
+    b.id = 'ns-breather'; b.setAttribute('data-ns-deco', '1');
+    b.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:2147483600;background:#0a3d2e;color:#d6f5e6;text-align:center;padding:14px;font-family:Georgia,serif;font-size:16px;box-shadow:0 -2px 12px rgba(0,0,0,.45)';
+    b.appendChild(document.createTextNode('🌿  You’ve been scrolling a while — take a breath.  '));
+    var btn = document.createElement('button');
+    btn.textContent = 'Keep going';
+    btn.style.cssText = 'margin-left:8px;padding:3px 12px;font-family:inherit;cursor:pointer';
+    btn.addEventListener('click', function () { b.remove(); });
+    b.appendChild(btn);
+    document.body.appendChild(b);
+  }
+  function setBreather(on) {
+    if (on && !breatherOn) { breatherOn = true; lastY = window.scrollY || 0; window.addEventListener('scroll', onBreatherScroll, { passive: true }); }
+    else if (!on && breatherOn) { breatherOn = false; window.removeEventListener('scroll', onBreatherScroll); }
+  }
+
   function applyFlourishes(list) {
     list = list || [];
     var has = function (k) { return list.indexOf(k) > -1; };
@@ -283,7 +335,9 @@ function notscapeEngine() {
   function runDynamic() {
     var c = NS.cfg;
     if (c.killSticky) unstick(true);
+    unlockScroll();
     if (c.blink) blink(true);
+    if (c.calmMode) calmHeadlines(true);
     if (c.marquee) marquee(true);
     if (c.dither) retroImages(c.pixelation || 0, c.colorDepth != null ? c.colorDepth : 1);
     deco('ns-construction', !!c.construction, buildConstruction, 'top');
@@ -319,6 +373,7 @@ function notscapeEngine() {
     try {
       // honor toggles that can be turned OFF without a reload
       unstick(!!NS.cfg.killSticky);
+      unlockScroll();
       blink(!!NS.cfg.blink);
       marquee(!!NS.cfg.marquee);
       deco('ns-construction', !!NS.cfg.construction, buildConstruction, 'top');
@@ -330,6 +385,8 @@ function notscapeEngine() {
       deco('ns-emailme', !!NS.cfg.emailme, buildEmailMe, 'bottom');
       deco('ns-midi', !!NS.cfg.midi, buildMidi, 'top');
       if (NS.cfg.dither) retroImages(NS.cfg.pixelation || 0, NS.cfg.colorDepth != null ? NS.cfg.colorDepth : 1);
+      calmHeadlines(!!NS.cfg.calmMode);
+      setBreather(!!NS.cfg.scrollBreather);
       applyFlourishes(NS.cfg.flourishes);
     } catch (e) {}
     applying = false;
@@ -344,6 +401,7 @@ function notscapeEngine() {
       blink(false);
       marquee(false);
       setCursorTrail(null);
+      setBreather(false);
     } catch (e) {}
     applying = false;
   };

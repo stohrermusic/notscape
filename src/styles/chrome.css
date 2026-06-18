@@ -28,10 +28,11 @@ html, body {
   padding: 3px 8px;
   margin-right: 3px;
 }
-.tbtn:active {
+.tbtn:active, .tbtn.active {
   border-color: #000000 #ffffff #ffffff #000000;
   box-shadow: inset 1px 1px 0 #808080;
 }
+.tbtn.active { background: #b0b0b0; }
 .tbtn:disabled { color: #808080; text-shadow: 1px 1px 0 #fff; }
 .tbtn.star { font-weight: bold; color: #000080; }
 
@@ -118,6 +119,79 @@ html, body {
 #webring-list .wr-title:hover { color: #ff0000; }
 #webring-list .wr-host { color: #008000; font-size: 11px; margin-left: 6px; }
 #webring-list .wr-desc { font-size: 11px; color: #404040; margin-top: 1px; }
+
+/* WEB DIRECTORY */
+.dir-cat { margin-bottom: 10px; }
+.dir-cat-title { background: #000080; color: #fff; font-weight: bold; padding: 3px 8px; font-family: 'MS Sans Serif', Tahoma, sans-serif; }
+.dir-site { padding: 3px 6px; border-bottom: 1px dotted #808080; font-size: 12px; }
+.dir-title { color: #0000ee; text-decoration: underline; cursor: default; font-weight: bold; }
+.dir-title:hover { color: #ff0000; }
+.dir-desc { color: #404040; }
+
+/* ============================ DARK MODE (chrome) ============================ */
+html.dark body, html.dark #app { background: #1e1e1e; color: #e6e6e6; }
+
+html.dark .tbtn, html.dark .tb-buttons button, html.dark .presets button,
+html.dark #mods-close, html.dark .mp-close, html.dark #findbar button, html.dark #status-meter {
+  background: #3a3a3a; color: #e6e6e6;
+  border-color: #5a5a5a #141414 #141414 #5a5a5a;
+  box-shadow: inset 1px 1px 0 #4d4d4d, inset -1px -1px 0 #0e0e0e;
+}
+html.dark .tbtn:active, html.dark .tbtn.active { border-color: #141414 #5a5a5a #5a5a5a #141414; box-shadow: inset 1px 1px 0 #0e0e0e; }
+html.dark .tbtn.star { color: #9cd2ff; }
+html.dark .tbtn:disabled { color: #777; text-shadow: 1px 1px 0 #000; }
+
+html.dark #menubar, html.dark #toolbar, html.dark #locationbar, html.dark #bookmarksbar {
+  background: #2a2a2a; border-bottom-color: #111; box-shadow: 0 1px 0 #3a3a3a;
+}
+html.dark #statusbar { background: #2a2a2a; border-top-color: #3a3a3a; box-shadow: inset 0 1px 0 #111; }
+html.dark .menu-item { color: #e6e6e6; }
+html.dark .menu-item:hover, html.dark .menu-item.open { background: #0a4a8a; color: #fff; }
+
+html.dark #urlbar, html.dark #findbar-input, html.dark .pref-row input[type=text],
+html.dark .hs-add input, html.dark select {
+  background: #161616; color: #e6e6e6; border-color: #0c0c0c #4a4a4a #4a4a4a #0c0c0c;
+}
+html.dark #status-text, html.dark #zone, html.dark #padlock {
+  background: #1a1a1a; color: #cfcfcf; border-color: #0c0c0c #3a3a3a #3a3a3a #0c0c0c;
+}
+html.dark .bm { color: #e6e6e6; }
+html.dark .bm:hover { background: #3a3a3a; border-color: #5a5a5a #111 #111 #5a5a5a; }
+html.dark .bm .fav { color: #9cd2ff; }
+
+html.dark #mods-panel, html.dark .ns-panel, html.dark #menu-dropdown {
+  background: #2c2c2c; color: #e6e6e6; border-color: #5a5a5a #111 #111 #5a5a5a;
+}
+html.dark .mp-body { color: #e6e6e6; }
+html.dark fieldset { border-color: #5a5a5a #111 #111 #5a5a5a; }
+html.dark legend { color: #e6e6e6; }
+html.dark .mp-hint { color: #aaa; }
+html.dark .mp-hint code { background: #161616; border-color: #444; color: #ddd; }
+html.dark .menu-entry { color: #e6e6e6; }
+html.dark .menu-entry:hover { background: #0a4a8a; color: #fff; }
+html.dark .menu-entry.disabled { color: #777; text-shadow: 1px 1px 0 #000; }
+html.dark .menu-sep { border-top-color: #111; border-bottom-color: #3a3a3a; }
+html.dark .slider span b, html.dark .about-logo { color: #9cd2ff; }
+
+html.dark #load-cover { background: #0d2b2b; }
+html.dark .lc-panel { background: #2c2c2c; color: #e6e6e6; border-color: #5a5a5a #111 #111 #5a5a5a; }
+html.dark .lc-sub { color: #aaa; }
+
+html.dark #history-list .h-link, html.dark #webring-list .wr-title, html.dark .dir-title,
+html.dark #hs-bookmarks .hs-bm-link, html.dark #hs-sotd .sotd-title { color: #6cb6ff; }
+html.dark .h-time, html.dark .wr-desc, html.dark .dir-desc, html.dark #hs-sotd .sotd-desc { color: #999; }
+
+/* start page in dark */
+html.dark #home-screen { background: #0d2b2b; }
+html.dark .hs-page { background: #2a2a2a; border-color: #5a5a5a #111 #111 #5a5a5a; }
+html.dark .hs-searchbar { background: #222; border-bottom-color: #3a3a3a; }
+html.dark .hs-searchbar input[type=text] { background: #161616; color: #e6e6e6; border-color: #0c0c0c #4a4a4a #4a4a4a #0c0c0c; }
+html.dark .hs-col + .hs-col, html.dark .hs-col-side { border-left-color: #111; }
+html.dark .hs-item, html.dark #hs-feedlist li, html.dark #hs-bookmarks li, html.dark #webring-list li,
+html.dark #history-list li, html.dark .dir-site { border-bottom-color: #3a3a3a; }
+html.dark .hs-item .hs-desc, html.dark .hs-today { color: #bbb; }
+html.dark #hs-feedlist a, html.dark #hs-bookmarks .hs-bm-link { color: #6cb6ff; }
+html.dark .hs-tip { color: #888; }
 
 /* TOOLBAR */
 #toolbar {

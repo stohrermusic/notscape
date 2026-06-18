@@ -9,7 +9,16 @@ const meterFill = document.getElementById('status-bar-fill');
 const bookmarksBar = document.getElementById('bookmarksbar');
 
 const HOME = 'home'; // sentinel — the start page is an overlay, not a loaded URL
-const SEARCH = 'https://lite.duckduckgo.com/lite/?q=';
+const SEARCH_ENGINES = {
+  marginalia: 'https://search.marginalia.nu/search?query=',
+  wiby: 'https://wiby.me/?q=',
+  ddg: 'https://lite.duckduckgo.com/lite/?q=',
+  google: 'https://www.google.com/search?q='
+};
+function searchUrl(q) {
+  const base = SEARCH_ENGINES[config.searchEngine] || SEARCH_ENGINES.ddg;
+  return base + encodeURIComponent(q);
+}
 const NETSCAPE_UA = 'Mozilla/4.0 (compatible; MSIE 4.0; Windows 95)';
 // Present as plain desktop Chrome (matches our Chromium engine) so logins like
 // Gmail don't reject us as an "insecure" embedded browser.
@@ -79,11 +88,20 @@ const DEFAULT_CONFIG = {
   chiptune: false,
   uiSounds: false,
   statusScroller: false,
+  // appearance
+  darkMode: false,
+  // calmer web
+  calmMode: true,   // hide engagement bait (metrics, rails, badges) + de-shout headlines
+  grayscale: false,
+  scrollBreather: false,
   // network / privacy
   blockAds: true,
   blockSocial: true,
   hideComments: true,
   allowAutoplay: false,
+  stripParams: true,
+  clearOnExit: false,
+  searchEngine: 'marginalia',
   safeMode: false,
   spoofUA: false,
   // flourishes
@@ -102,6 +120,21 @@ let uaApplied = false;      // have we set our clean Chrome UA yet?
 const ENGINE_SOURCE = '(' + window.notscapeEngine.toString() + ')()';
 
 // ---------------------------------------------------------------------------
+// Debug logging — streamed to notscape-debug.log so a session can be watched
+// ---------------------------------------------------------------------------
+function nslog(s) { try { window.notscape.log(s); } catch (_) {} }
+window.addEventListener('error', (e) =>
+  nslog('RENDERER ERROR: ' + (e.message || '') + ' @ ' + ((e.filename || '').split(/[\\/]/).pop()) + ':' + (e.lineno || 0)));
+window.addEventListener('unhandledrejection', (e) =>
+  nslog('RENDERER REJECTION: ' + ((e.reason && e.reason.message) || e.reason)));
+view.addEventListener('console-message', (e) => {
+  if (e.level >= 2) {
+    nslog('PAGE[' + (e.level === 3 ? 'ERR' : 'WARN') + '] ' + (e.message || '').slice(0, 300) +
+      ' (' + ((e.sourceId || '').split(/[\\/]/).pop()) + ':' + (e.line || 0) + ')');
+  }
+});
+
+// ---------------------------------------------------------------------------
 // URL handling
 // ---------------------------------------------------------------------------
 function isProbablyUrl(s) {
@@ -114,7 +147,7 @@ function toLocation(input) {
   if (!s) return HOME;
   if (s === 'home' || s === 'notscape:home' || s === 'about:home') return HOME;
   if (isProbablyUrl(s)) return /^[a-z]+:\/\//i.test(s) ? s : 'https://' + s;
-  return SEARCH + encodeURIComponent(s);
+  return searchUrl(s);
 }
 function hostOf(url) {
   try { return new URL(url).hostname.toLowerCase(); } catch (_) { return ''; }
@@ -135,6 +168,7 @@ function showHome() {
   winTitle.textContent = 'Notscape';
   if (window.NotscapeHome) window.NotscapeHome.onShow();
   applyExtras();
+  renderSiteOfDay();
   updateNavButtons();
 }
 function hideHome() {
@@ -145,7 +179,8 @@ function hideHome() {
 function navigate(input) {
   const loc = toLocation(input);
   uiClick();
-  if (loc === HOME) { showHome(); return; }
+  if (loc === HOME) { nslog('GOTO home'); showHome(); return; }
+  nslog('GOTO ' + loc);
   currentURL = loc;
   hideHome();
   applyExtras();
@@ -153,6 +188,7 @@ function navigate(input) {
 }
 // let the start page open links/searches in the webview
 window.notscapeOpen = navigate;
+window.notscapeSearchUrl = searchUrl;
 
 // ---------------------------------------------------------------------------
 // Apply the retro transform to the current page
@@ -224,6 +260,8 @@ async function applyTransform() {
             midi: fset.has('midi')
           })
         : { enabled: false, flourishes: fkeys,
+            calmMode: config.calmMode,
+            scrollBreather: config.scrollBreather,
             marquee: fset.has('scroll'),
             construction: fset.has('construction'),
             hitCounter: fset.has('counter'),
@@ -268,12 +306,34 @@ const COMMENT_CSS = [
   '[class*="comments-section"]', '[class*="comment-section"]', 'section[aria-label*="omment" i]'
 ].join(',') + '{display:none!important}';
 
+// Calm Mode — hide engagement bait: rabbit-hole rails, vanity counts, notification badges
+const CALM_CSS = [
+  '#related', 'ytd-watch-next-secondary-results-renderer', '#secondary.ytd-watch-flexy',
+  '.ytp-ce-element', '.ytp-endscreen-content',
+  'ytd-reel-shelf-renderer', 'ytd-rich-shelf-renderer', 'ytd-merch-shelf-renderer',
+  '[class*="view-count" i]', '[class*="like-count" i]', '[class*="follower-count" i]',
+  '[class*="reaction-count" i]', '[class*="vote-count" i]',
+  '[class*="notification-badge" i]', '[class*="unread-badge" i]', '[class*="badge-count" i]'
+].join(',') + '{display:none!important}\n' +
+  '[data-ns-calm]{text-transform:lowercase!important}\n' +
+  '[data-ns-calm]::first-letter{text-transform:uppercase!important}';
+
 async function applyPageCosmetics() {
   if (adCssKey) { try { await view.removeInsertedCSS(adCssKey); } catch (_) {} adCssKey = null; }
   if (isHome(currentURL) || isAuthHost(hostOf(currentURL))) return;
   let css = '';
   if (config.blockAds) css += AD_COSMETIC_CSS + '\n';
   if (config.hideComments) css += COMMENT_CSS + '\n';
+  if (config.calmMode) css += CALM_CSS + '\n';
+  // combine html filters: grayscale + smart-invert dark mode
+  const filters = [];
+  if (config.grayscale) filters.push('grayscale(1)');
+  if (config.darkMode) filters.push('invert(1) hue-rotate(180deg)');
+  if (filters.length) css += 'html{filter:' + filters.join(' ') + '!important}\n';
+  if (config.darkMode) {
+    // re-invert media so photos/videos look normal under the dark invert
+    css += 'img,picture,video,canvas,svg,image,iframe,[style*="background-image"]{filter:invert(1) hue-rotate(180deg)!important}\n';
+  }
   if (css) { try { adCssKey = await view.insertCSS(css); } catch (_) {} }
 }
 
@@ -384,12 +444,15 @@ view.addEventListener('did-start-navigation', (e) => {
     return;
   }
   engineInjected = false;
+  readerActive = false;
+  document.getElementById('reader-btn').classList.remove('active');
   if (config.enabled && !isHome(e.url) && !/^data:/.test(e.url)) showCover(e.url);
   else hideCover();
 });
 
 view.addEventListener('did-navigate', (e) => {
   if (e.url === 'about:blank' || /^data:/.test(e.url)) return; // blank/data pages: leave address bar as-is
+  nslog('NAV ' + e.url);
   currentURL = e.url;
   urlbar.value = isHome(e.url) ? '' : e.url;
   const ri = ringIndexOf(hostOf(e.url));
@@ -425,10 +488,12 @@ view.addEventListener('did-finish-load', async () => {
   applyPagePolicies();
   hideCover();
   detectBuilder();
+  detectFeed();
 });
 
 view.addEventListener('did-fail-load', (e) => {
   if (e.errorCode === -3 || !e.isMainFrame) return; // -3 = aborted
+  nslog('FAILLOAD ' + e.errorCode + ' ' + e.errorDescription + ' :: ' + (e.validatedURL || ''));
   setLoading(false);
   hideCover();
   uiDing();
@@ -504,6 +569,14 @@ function toggleMaster() {
   applyTransform();
   syncModsPanel();
 }
+function applyDarkChrome() { document.documentElement.classList.toggle('dark', !!config.darkMode); }
+function toggleDark() {
+  config.darkMode = !config.darkMode;
+  saveConfig();
+  applyDarkChrome();
+  applyPageCosmetics();
+  syncModsPanel();
+}
 
 // ---------------------------------------------------------------------------
 // Menu-bar dropdowns (File / Edit / View / Go / Bookmarks / Help)
@@ -521,6 +594,7 @@ function doEdit(cmd) {
 }
 const MENUS = {
   file: () => [
+    { label: 'Web Directory…', action: openDirectory },
     { label: 'Webring…', action: openWebring },
     { label: 'New Window', action: () => window.notscape.newWindow() },
     { label: 'Start Page', action: () => navigate('home') },
@@ -546,6 +620,7 @@ const MENUS = {
     { label: 'Forward', action: () => { if (view.canGoForward()) { hideHome(); view.goForward(); } }, disabled: !view.canGoForward() },
     { label: 'Reload', action: () => view.reload() },
     { sep: true },
+    { label: (config.darkMode ? '✓ ' : '   ') + 'Dark Mode', action: toggleDark },
     { label: (config.enabled ? '✓ ' : ' ') + 'Old Internet', action: toggleMaster },
     { label: (isSiteDisabled(hostOf(currentURL)) ? '   ' : '✓ ') + 'Old web on this site', action: toggleSiteDisabled, disabled: isHome(currentURL) },
     { sep: true },
@@ -794,31 +869,36 @@ function applyExtras() {
 // Notscape Webring — Prev/Random/Next in the footer actually cycle the ring
 // ---------------------------------------------------------------------------
 function ringHost(url) { try { return new URL(url).hostname.toLowerCase().replace(/^www\./, ''); } catch (_) { return ''; } }
+function personalRing() { try { return JSON.parse(localStorage.getItem('ns-personal-ring') || '[]'); } catch (_) { return []; } }
+function savePersonalRing(arr) { try { localStorage.setItem('ns-personal-ring', JSON.stringify(arr)); } catch (_) {} }
+function getRing() { return window.NotscapeRing.concat(personalRing()); }
 function ringIndexOf(host) {
   if (!host) return -1;
   const h = host.replace(/^www\./, '');
-  return window.NotscapeRing.findIndex((r) => { const rh = ringHost(r.url); return h === rh || h.endsWith('.' + rh); });
+  return getRing().findIndex((r) => { const rh = ringHost(r.url); return h === rh || h.endsWith('.' + rh); });
 }
 function isRingMember(host) { return ringIndexOf(host) >= 0; }
 let webringIndex = (function () { const n = parseInt(localStorage.getItem('ns-webring-idx') || '0', 10); return isNaN(n) ? 0 : n; })();
 function computeWebringData(host) {
-  const ring = window.NotscapeRing, len = ring.length;
+  const ring = getRing(), len = ring.length;
   let idx = ringIndexOf(host);
-  if (idx < 0) idx = webringIndex;
+  if (idx < 0) idx = Math.min(webringIndex, len - 1);
   let r = Math.floor(Math.random() * len); if (r === idx) r = (r + 1) % len;
   return { prev: ring[(idx - 1 + len) % len].url, next: ring[(idx + 1) % len].url, random: ring[r].url, pos: idx + 1, total: len };
 }
 function openWebring() {
   const ul = document.getElementById('webring-list');
-  ul.innerHTML = window.NotscapeRing.map((r, i) =>
+  const curated = window.NotscapeRing.length;
+  ul.innerHTML = getRing().map((r, i) =>
     '<li><span class="wr-title" data-ring="' + i + '">' + escapeHtml(r.title) + '</span>' +
     '<span class="wr-host">' + escapeHtml(ringHost(r.url)) + '</span>' +
-    '<div class="wr-desc">' + escapeHtml(r.desc) + '</div></li>'
+    (i >= curated ? '<span data-ring-del="' + (i - curated) + '" title="Remove" style="color:#aa0000;cursor:default;padding:0 6px;font-weight:bold">✕</span>' : '') +
+    '<div class="wr-desc">' + escapeHtml(r.desc || '') + '</div></li>'
   ).join('');
   openOverlay('webring-overlay');
 }
 function ringGo(which) {
-  const ring = window.NotscapeRing, len = ring.length;
+  const ring = getRing(), len = ring.length;
   if (which === 'list') { openWebring(); return; }
   if (which === 'random') { navigate(ring[Math.floor(Math.random() * len)].url); return; }
   const delta = which === 'prev' ? -1 : 1;
@@ -826,18 +906,68 @@ function ringGo(which) {
 }
 (function wireWebring() {
   document.getElementById('webring-list').addEventListener('click', (e) => {
+    const del = e.target.closest('[data-ring-del]');
+    if (del) { const arr = personalRing(); arr.splice(parseInt(del.dataset.ringDel, 10), 1); savePersonalRing(arr); openWebring(); return; }
     const t = e.target.closest('.wr-title');
-    if (t) { const r = window.NotscapeRing[parseInt(t.dataset.ring, 10)]; if (r) { closeOverlay('webring-overlay'); navigate(r.url); } }
+    if (t) { const r = getRing()[parseInt(t.dataset.ring, 10)]; if (r) { closeOverlay('webring-overlay'); navigate(r.url); } }
   });
   document.getElementById('webring-random').addEventListener('click', () => {
-    const r = window.NotscapeRing[Math.floor(Math.random() * window.NotscapeRing.length)];
+    const ring = getRing(); const r = ring[Math.floor(Math.random() * ring.length)];
     closeOverlay('webring-overlay'); navigate(r.url);
+  });
+  document.getElementById('webring-addform').addEventListener('submit', (e) => {
+    e.preventDefault();
+    let u = document.getElementById('webring-addurl').value.trim();
+    if (!u) return;
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    const title = document.getElementById('webring-addtitle').value.trim() || ringHost(u);
+    const arr = personalRing(); arr.push({ url: u, title: title, desc: 'Added by you.' }); savePersonalRing(arr);
+    document.getElementById('webring-addurl').value = ''; document.getElementById('webring-addtitle').value = '';
+    openWebring();
   });
   // start-page webring footer (links carry data-ring)
   const hs = document.getElementById('home-screen');
   if (hs) hs.addEventListener('click', (e) => {
     const a = e.target.closest('[data-ring]');
-    if (a) { e.preventDefault(); ringGo(a.dataset.ring); }
+    if (a) { e.preventDefault(); ringGo(a.dataset.ring); return; }
+    const d = e.target.closest('[data-dir-open]');
+    if (d) { e.preventDefault(); openDirectory(); }
+  });
+})();
+
+// Site of the Day — a curated ring pick that rotates daily
+function renderSiteOfDay() {
+  const el = document.getElementById('hs-sotd');
+  if (!el || !window.NotscapeRing || !window.NotscapeRing.length) return;
+  const ring = window.NotscapeRing;
+  const now = new Date();
+  const day = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+  const r = ring[day % ring.length];
+  el.innerHTML = '<span class="sotd-title">' + escapeHtml(r.title) + '</span>' +
+    '<div class="sotd-desc">' + escapeHtml(r.desc) + '</div>';
+  el._sotdUrl = r.url;
+}
+(function () {
+  const el = document.getElementById('hs-sotd');
+  if (el) el.addEventListener('click', (e) => { if (e.target.closest('.sotd-title') && el._sotdUrl) navigate(el._sotdUrl); });
+})();
+
+// Web Directory — a browsable, curated topic directory
+function openDirectory() {
+  const el = document.getElementById('directory-list');
+  el.innerHTML = (window.NotscapeDirectory || []).map((c) =>
+    '<div class="dir-cat"><div class="dir-cat-title">' + escapeHtml(c.cat) + '</div>' +
+    c.sites.map((s) =>
+      '<div class="dir-site"><span class="dir-title" data-dir="' + escapeHtml(s.url) + '">' + escapeHtml(s.title) + '</span>' +
+      '<span class="dir-desc"> &mdash; ' + escapeHtml(s.desc) + '</span></div>'
+    ).join('') + '</div>'
+  ).join('');
+  openOverlay('directory-overlay');
+}
+(function wireDirectory() {
+  document.getElementById('directory-list').addEventListener('click', (e) => {
+    const t = e.target.closest('[data-dir]');
+    if (t) { closeOverlay('directory-overlay'); navigate(t.dataset.dir); }
   });
 })();
 function syncMasterToggle() {
@@ -925,6 +1055,90 @@ document.querySelectorAll('.ns-overlay').forEach((ov) =>
 document.getElementById('flourishes-btn').addEventListener('click', openFlourishes);
 document.getElementById('fx-reshuffle').addEventListener('click', reshuffleFlourishes);
 
+// 🎲 Stumble — jump to a random indie gem
+document.getElementById('stumble-btn').addEventListener('click', () => ringGo('random'));
+
+// 📖 Reader Mode — strip the page to clean, readable text
+function notscapeReader() {
+  if (window.__NS_READER__) return true;
+  function score(el) { var ps = el.querySelectorAll('p'); var n = 0; for (var i = 0; i < ps.length; i++) n += (ps[i].textContent || '').trim().length; return n; }
+  var best = null, bestScore = 0;
+  var prefer = document.querySelectorAll('article,[role=main],main,.post,.entry-content,.post-content,.article-body,.story-body,#content,.content');
+  for (var i = 0; i < prefer.length; i++) { var s = score(prefer[i]); if (s > bestScore) { bestScore = s; best = prefer[i]; } }
+  if (!best || bestScore < 200) {
+    var all = document.querySelectorAll('div,section,article,main');
+    for (var j = 0; j < all.length; j++) { var s2 = score(all[j]); if (s2 > bestScore) { bestScore = s2; best = all[j]; } }
+  }
+  if (!best || bestScore < 120) return false;
+  var titleEl = document.querySelector('h1');
+  var title = (titleEl && titleEl.textContent.trim()) || document.title || '';
+  var wrap = document.createElement('div'); wrap.id = 'ns-reader';
+  var col = document.createElement('div'); col.className = 'ns-reader-inner';
+  var h = document.createElement('h1'); h.textContent = title;
+  var body = document.createElement('div'); body.innerHTML = best.innerHTML;
+  col.appendChild(h); col.appendChild(body); wrap.appendChild(col);
+  document.documentElement.setAttribute('data-ns-reader', '1');
+  document.body.appendChild(wrap);
+  window.__NS_READER__ = true;
+  window.scrollTo(0, 0);
+  return true;
+}
+const READER_CSS =
+  'html[data-ns-reader],html[data-ns-reader] body{background:#f4f1ea!important;overflow:auto!important;height:auto!important}' +
+  'html[data-ns-reader] body > *:not(#ns-reader){display:none!important}' +
+  '#ns-reader{position:relative!important;z-index:2147483000!important;display:block!important}' +
+  "#ns-reader .ns-reader-inner{max-width:680px!important;margin:0 auto!important;padding:40px 24px!important;font-family:Georgia,'Times New Roman',serif!important;font-size:20px!important;line-height:1.7!important;color:#222!important}" +
+  '#ns-reader h1{font-size:32px!important;line-height:1.2!important;margin:0 0 24px!important;color:#111!important;font-family:Georgia,serif!important}' +
+  '#ns-reader p{margin:0 0 1.2em!important;font-size:20px!important;line-height:1.7!important}' +
+  '#ns-reader h2,#ns-reader h3{font-family:Georgia,serif!important;color:#111!important}' +
+  '#ns-reader img{max-width:100%!important;height:auto!important;display:block!important;margin:18px auto!important}' +
+  '#ns-reader a{color:#0000cc!important;text-decoration:underline!important}' +
+  '#ns-reader figure,#ns-reader iframe,#ns-reader video{max-width:100%!important}';
+let readerActive = false;
+async function toggleReader() {
+  if (isHome(currentURL) || /^data:/.test(currentURL)) return;
+  if (readerActive) { view.reload(); return; } // exit by reloading the page
+  try {
+    const ok = await view.executeJavaScript('(' + notscapeReader.toString() + ')()');
+    if (ok) {
+      await view.insertCSS(READER_CSS);
+      readerActive = true;
+      document.getElementById('reader-btn').classList.add('active');
+      statusText.textContent = '📖 Reader Mode — click 📖 again to exit.';
+    } else {
+      statusText.textContent = "Reader Mode: couldn't find an article on this page.";
+    }
+  } catch (_) {}
+}
+document.getElementById('reader-btn').addEventListener('click', toggleReader);
+
+// 📡 Subscribe — detect a page's RSS feed and add it to the start page
+let detectedFeed = null;
+async function detectFeed() {
+  detectedFeed = null;
+  const btn = document.getElementById('subscribe-btn');
+  btn.hidden = true;
+  if (isHome(currentURL) || /^data:/.test(currentURL)) return;
+  try {
+    const url = await view.executeJavaScript('(function(){' +
+      'var l=document.querySelector(\'link[rel~="alternate"][type="application/rss+xml"],link[rel~="alternate"][type="application/atom+xml"]\');' +
+      'if(!l) return ""; try { return new URL(l.getAttribute("href"), location.href).href; } catch(e){ return ""; }})()');
+    if (url) { detectedFeed = url; btn.hidden = false; }
+  } catch (_) {}
+}
+document.getElementById('subscribe-btn').addEventListener('click', async () => {
+  if (!detectedFeed) return;
+  try {
+    const feeds = (await window.notscape.getFeeds()) || [];
+    if (feeds.some((f) => f.url === detectedFeed)) { statusText.textContent = 'Already subscribed on your start page.'; return; }
+    const title = (winTitle.textContent || hostOf(currentURL)).replace(/ — Notscape$/, '').slice(0, 40) || hostOf(currentURL);
+    feeds.push({ title, url: detectedFeed });
+    await window.notscape.setFeeds(feeds);
+    statusText.textContent = '📡 Subscribed — added "' + title + '" to your start page.';
+    document.getElementById('subscribe-btn').hidden = true;
+  } catch (_) {}
+});
+
 // --- Preferences ---
 function openPrefs() {
   const sn = document.getElementById('pref-screenname');
@@ -933,6 +1147,9 @@ function openPrefs() {
   document.getElementById('blockSocial').checked = !!config.blockSocial;
   document.getElementById('hideComments').checked = !!config.hideComments;
   document.getElementById('allowAutoplay').checked = !!config.allowAutoplay;
+  document.getElementById('stripParams').checked = !!config.stripParams;
+  document.getElementById('clearOnExit').checked = !!config.clearOnExit;
+  document.getElementById('pref-search').value = config.searchEngine || 'marginalia';
   document.getElementById('safeMode').checked = !!config.safeMode;
   document.getElementById('prefRandomFlourishes').checked = !!config.randomFlourishes;
   openOverlay('prefs-overlay');
@@ -967,6 +1184,12 @@ function openPrefs() {
   if (bso) bso.addEventListener('change', () => { config.blockSocial = bso.checked; saveConfig(); window.notscape.setBlockSocial(bso.checked); });
   const hc = document.getElementById('hideComments');
   if (hc) hc.addEventListener('change', () => { config.hideComments = hc.checked; saveConfig(); applyPageCosmetics(); });
+  const sp = document.getElementById('stripParams');
+  if (sp) sp.addEventListener('change', () => { config.stripParams = sp.checked; saveConfig(); window.notscape.setStripParams(sp.checked); });
+  const coe = document.getElementById('clearOnExit');
+  if (coe) coe.addEventListener('change', () => { config.clearOnExit = coe.checked; saveConfig(); });
+  const se = document.getElementById('pref-search');
+  if (se) se.addEventListener('change', () => { config.searchEngine = se.value; saveConfig(); });
 })();
 
 // --- Flourishes (per current site) ---
@@ -1033,7 +1256,7 @@ function reshuffleFlourishes() {
 const overlay = document.getElementById('mods-overlay');
 const CHECKS = ['siteSkins', 'oldFonts', 'flatten', 'beveled', 'retroLinks', 'grayBg', 'tiledBg',
   'comicSans', 'retroMedia', 'killSticky', 'marquee', 'blink', 'construction', 'hitCounter', 'webring', 'dither',
-  'soundWelcome', 'soundMail', 'chiptune', 'uiSounds', 'statusScroller', 'spoofUA'];
+  'darkMode', 'calmMode', 'grayscale', 'scrollBreather', 'soundWelcome', 'soundMail', 'chiptune', 'uiSounds', 'statusScroller', 'spoofUA'];
 const SLIDERS = ['age', 'pixelation', 'colorDepth'];
 
 function openMods() { syncModsPanel(); overlay.hidden = false; }
@@ -1092,6 +1315,8 @@ CHECKS.forEach((k) => {
     else if (k === 'blockAds') { window.notscape.setBlockAds(el.checked); view.reload(); }
     else if (k === 'safeMode') { window.notscape.setSafeMode(el.checked); view.reload(); }
     else if (k === 'chiptune' || k === 'uiSounds' || k === 'statusScroller') applyExtras();
+    else if (k === 'darkMode') { applyDarkChrome(); applyPageCosmetics(); }
+    else if (k === 'calmMode' || k === 'grayscale') applyPageCosmetics();
     else applyTransform();
   });
 });
@@ -1261,9 +1486,11 @@ async function init() {
   // keep the main process's network flags in sync with saved prefs
   window.notscape.setBlockAds(config.blockAds);
   window.notscape.setBlockSocial(config.blockSocial);
+  window.notscape.setStripParams(config.stripParams);
   window.notscape.setSafeMode(config.safeMode);
   bookmarks = await window.notscape.getBookmarks();
   siteFlourishes = {}; // session-only: random flourishes reset on restart
+  applyDarkChrome();
   buildMasterToggle();
   syncMasterToggle();
   renderBookmarks();

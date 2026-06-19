@@ -1,19 +1,22 @@
 # Notscape 🌐
 
-> A browser that makes every website look like the old internet.
+> A browser that re-skins the modern web to look — and *feel* — like 1996.
 
-Notscape is an Electron browser that loads real, modern websites and re-skins
-them into the web of ~1996 — gray backgrounds, Times New Roman, blue underlined
-links, beveled buttons, marquees, hit counters, and tiled starfields. The
-browser *itself* looks old too: a frameless Windows 95 / Netscape Navigator
-chrome with a meteor-shower throbber, and an AOL-style dial-up sign-on (complete
-with a synthesized modem screech) every time you launch.
+Notscape is an Electron browser that loads real, modern websites and transforms
+them into the web of ~1996: gray backgrounds, Times New Roman, blue underlined
+links, marquees, tiled wallpapers, and random "flourishes." The browser itself
+looks old too — frameless Netscape chrome and an AOL-style dial-up sign-on (with
+a synthesized modem screech) on every launch.
+
+The nostalgia is the hook. The point is a **healthier web**: calmer, less
+addictive, less surveilled, tilted back toward the human/indie web instead of
+algorithmic slop.
 
 ## Install (Windows)
 
-Grab **`Notscape-Setup-0.6.0.exe`** from the
+Grab **`Notscape-Setup-0.7.0.exe`** from the
 [latest release](https://github.com/stohrermusic/notscape/releases), run it, and
-launch Notscape from the Start menu or desktop shortcut.
+launch from the Start menu.
 
 ## Run from source
 
@@ -24,73 +27,44 @@ npm start
 
 Then click **Sign On**, wait for the modem to connect, and start surfing.
 
-## Build the installer yourself
-
-```sh
-npm install
-npm run installer     # generates the icon, packages the app, runs Inno Setup
-```
-
-This produces `dist/Notscape-Setup-0.6.0.exe`. Requires
-[Inno Setup 6](https://jrsoftware.org/isdl.php) on `PATH` (the `iscc` command).
-`npm run dist:linux` / `npm run dist:mac` build an AppImage / dmg, but those must
-be run on their native OS.
-
-### A note on the AOL sounds
-
-The genuine AOL "Welcome" / "You've Got Mail" clips are copyrighted and are **not**
-bundled. The app speaks the line with text-to-speech instead. To use the real
-audio locally, drop `welcome.wav` and `youve-got-mail.wav` into the per-user
-folder `%APPDATA%\Notscape\assets\` (or `assets/` when running from source).
-
 ## Features
 
-- **Dial-up sign-on splash** — pick your screen name (defaults to `saxman103`,
-  remembered between sessions), hear the modem handshake, watch it "connect."
-- **Transform is ON by default** — you land in the old web. The toolbar
-  **Old Internet: ON/OFF** lamp flips the whole thing off instantly.
-- **The Mods panel (★ Mods)** — presets (Modern / Reskin / GeoCities!!! / Mosaic),
-  sliders (Vintage aging, Image pixelation, Color depth), and a pile of toggles:
-  old fonts, flatten corners, beveled boxes, retro links, gray/starfield
-  backgrounds, Comic Sans everything, un-stick headers, marquee headings, blink
-  text, "Under Construction", fake hit counters, a webring footer, and retro
-  (pixelated/dithered) images.
-- **Per-site skins** — recognized sites get a hand-tuned look:
-  - **Reddit** → a green-on-black **BBS**
-  - **The New York Times** → a **1995 broadsheet**
-  - **Gmail** → a **terminal / PINE-style** mail reader
-  - **YouTube** → **2005–2006 YouTube** ("Broadcast Yourself™")
-- **AOL sounds** — "Welcome!" on connect and "You've got mail!" on Gmail
-  (toggleable; drops in real `.wav`s from `assets/`, else uses text-to-speech).
-- **Normal browser stuff** — back/forward/reload/stop/home, a Location bar with
-  search, a bookmarks bar (➕ to add, right-click to remove), and history.
+- **The old web, on by default** — land in 1996; a toolbar lamp flips it off
+  instantly. The **★ Mods** panel has presets, sliders (brightness, contrast,
+  GeoCities-ify, aging, pixelation), and toggles galore.
+- **Random flourishes** — each site gets its own persisted set of 90s touches;
+  pick a **theme** (All / Subdued / Dark) and **intensity** (Light / Moderate / Heavy).
+- **Per-site skins** — Reddit→BBS, NYT→1995 broadsheet, Gmail→PINE terminal,
+  YouTube→2006, Facebook→MySpace, Spotify→Winamp, Google→1998, Wikipedia→Encarta.
+- **Calmer web** — sentence-cases screaming headlines, reader mode, grayscale,
+  enforced readability (WCAG contrast), moderate dark mode.
+- **Privacy, quietly** — blocks ads/trackers/social, strips tracking params,
+  dismisses cookie banners, clears storage each session. No "trackers blocked!"
+  counter — it just does it.
+- **Anti-slop** — small-web search (Marginalia) and a curated webring/directory.
+  Social media is a period-accurate **404** (it didn't exist yet).
+- **Toys** — Wayback time-travel, an After-Dark screensaver, AOL sounds, plus the
+  usual nav / bookmarks / find / history.
 
 ## How it works
 
-- The site never has to cooperate: `main.js` strips `Content-Security-Policy`
-  and `X-Frame-Options` so anything loads and can be restyled.
-- `src/inject/styles.js` builds the "make it 1996" stylesheet from your Mods
-  config (plus any matching site skin) and injects it via `webview.insertCSS()`
-  — which bypasses page CSP.
-- `src/inject/engine.js` handles the DOM-level effects (marquees, counters,
-  image dithering, un-sticking) and re-applies them as pages change via a
-  `MutationObserver`.
+`main.js` strips `Content-Security-Policy` / `X-Frame-Options` (and blocks
+ad/tracker requests) so any site loads and can be restyled. `src/inject/styles.js`
+builds the "make it 1996" CSS and injects it via `webview.insertCSS()` (bypasses
+CSP); `src/inject/engine.js` runs inside the page for DOM-level effects and
+re-applies them on change via a `MutationObserver`.
 
-## Project layout
+## Build the installer
 
+```sh
+npm run installer     # icon + electron-builder --dir + Inno Setup → dist/Notscape-Setup-0.7.0.exe
 ```
-main.js              Electron main process (windows, header stripping, storage)
-preload.js           contextBridge IPC
-src/
-  splash.html/.js    AOL-style dial-up sign-on + synthesized modem
-  index.html         the browser chrome
-  renderer.js        browser logic (nav, bookmarks, mods, sounds)
-  home.html          retro start page ("Notscape NetCenter")
-  styles/            chrome + splash CSS
-  inject/
-    styles.js        global transform CSS + per-site skins
-    engine.js        injected DOM-effects engine
-assets/              drop welcome.wav / youve-got-mail.wav here (optional)
-```
+
+Requires [Inno Setup 6](https://jrsoftware.org/isdl.php). The genuine AOL sound
+clips are copyrighted and **not** bundled (TTS fallback); drop `welcome.wav` /
+`youve-got-mail.wav` into `%APPDATA%\Notscape\assets\` to use the real audio.
+
+See [`CLAUDE.md`](CLAUDE.md) for architecture, the project's aims, and the full
+release workflow.
 
 Notscape © 1996–2026 · Made with `<3` and too many `<table>` tags.
